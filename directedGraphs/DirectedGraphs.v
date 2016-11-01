@@ -8,8 +8,7 @@
 
 *)
 
-Require Import MSets MSetFacts pair_UOT.
-
+Require Import MSets MSetFacts.
 Module Type DirectedGraphs.
 
   Declare Module Edges : Sets.
@@ -130,7 +129,7 @@ Module myGraph : DirectedGraphs.
 
   Module pos :=  PositiveOrderedTypeBits.
   
-  Module Vertices := MSetAVL.Make  pos.
+  Module Vertices := MSetAVL.Make pos.
   Definition node := pos.t.
   Module Edge := PairOrderedType pos pos.
   Module Edges := MSetAVL.Make Edge.
@@ -149,9 +148,11 @@ Module myGraph : DirectedGraphs.
   Definition t := Graph.
 
   Definition empty := mkgraph Vertices.empty Edges.empty.
+  Open Scope positive_scope.
 
-  (* Definition buildEdge (n n1 : Vertices.t): e_set := *)
-  (*   Edges.add (n,n1) Edges.empty. *)
+
+  Definition buildEdge (n n1 : Vertices.t): Edges.t :=
+    Edges.add (1,2) Edges.empty.
 
 
   (* Definition destructEdge : edge -> (node * node) := *)
@@ -159,15 +160,15 @@ Module myGraph : DirectedGraphs.
 
 
   
-(*Definition destructEdge : Edge.t -> (node.t * node.t).
+Definition destructEdge : Edge.t -> (Vertices.t * Vertices.t).
   intros.
   destruct X.
   apply (buildEdge p p0).
-  Defined.*)
+  Defined.
 
 
-(*  Definition isempty ( v : v_set.t) (e : edge_set.t) :=
-    v_set.Empty v  /\ edge_set.Empty e. *)
+ Definition isempty ( v : v_set.t) (e : edge_set.t) :=
+    v_set.Empty v  /\ edge_set.Empty e.
     
   
 
