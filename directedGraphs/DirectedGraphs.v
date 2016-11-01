@@ -134,7 +134,13 @@ Module myGraph : DirectedGraphs.
   Module Edge := PairOrderedType pos pos.
   Module Edges := MSetAVL.Make Edge.
 
-  
+
+  Module vert_facts := WFacts (Vertices).
+  Module edge_facts := WFacts (Edges).
+  Module vert_prop := WProperties (Vertices).
+  Module edge_prop := WProperties (Edges).
+
+
 
   Definition edge := Edges.t.
   Definition v_set := Vertices.t.
@@ -150,27 +156,32 @@ Module myGraph : DirectedGraphs.
   Definition empty := mkgraph Vertices.empty Edges.empty.
   Open Scope positive_scope.
 
+  Notation vertex := Vertices.elt.
+    
 
-  Definition buildEdge (n n1 : Vertices.t): Edges.t :=
-    Edges.add (1,2) Edges.empty.
+  Definition buildEdge (n n1 : vertex): Edges.elt :=
+    (n,n1).
 
 
-  (* Definition destructEdge : edge -> (node * node) := *)
+  (* Definition destructEdge : edge -> (vertex * vertex) := *)
   (*   fun X : edge => let (p, p0) := X in buildEdge p p0. *)
 
 
-  
-Definition destructEdge : Edge.t -> (Vertices.t * Vertices.t).
-  intros.
-  destruct X.
-  apply (buildEdge p p0).
-  Defined.
 
 
- Definition isempty ( v : v_set.t) (e : edge_set.t) :=
-    v_set.Empty v  /\ edge_set.Empty e.
-    
+  Definition buildPair : vertex -> vertex -> vertex * vertex :=
+    fun x y => (x,y).
+
   
+Definition destructEdge : Edge.t -> (vertex * vertex) :=
+  fun X : Edge.t => let (p, p0) := X in (p, p0).
+
+  (* intros. *)
+  (* destruct X. *)
+  (* exact (p, p0). *)
+(*Defined.*)
+
+
 
   Definition isemptyP : v_set -> e_set -> Prop :=
     fun (x : v_set) (y : e_set) => Vertices.Empty x  /\ Edges.Empty y.
@@ -214,7 +225,7 @@ Definition destructEdge : Edge.t -> (Vertices.t * Vertices.t).
         | {| V := v; E := e0 |} => Edges.mem e e0
         end.
 
-    Lemma isEmpty_reflect :
+    Lemma IsEmpty_reflect :
       forall G : Graph, reflect (IsEmpty G) (isEmpty G).
     Proof.
       intros.
@@ -302,6 +313,14 @@ Definition destructEdge : Edge.t -> (Vertices.t * Vertices.t).
     Lemma Edge_exists1 :
      forall (G : t) (e : Edges.elt),
      IsEdge e G -> IsVertex (fst (destructEdge e)) G.
+    Proof.
+      intros [V E] e H.
+      simpl in *.
+      unfold destructEdge.
+      destruct e.
+      simpl.
+      Admitted.
+      
 
 
 
