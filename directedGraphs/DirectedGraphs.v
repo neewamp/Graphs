@@ -140,108 +140,69 @@ Module myGraph : DirectedGraphs.
   Module vert_prop := WProperties (Vertices).
   Module edge_prop := WProperties (Edges).
 
-
-
   Definition edge := Edges.elt.
   Definition v_set := Vertices.t.
   Definition e_set := Edges.t.
-  Inductive ok : v_set -> e_set -> Prop :=
-  | emp_ok : ok Vertices.empty Edges.empty
-  | other : forall (V : v_set) (E : e_set) (e : edge),  (Vertices.In (fst e) V) /\ (Vertices.In (snd e) V) -> ok V E.
-
+  
+  Definition ok  (V : v_set) (E : e_set) : Prop :=
+    forall (e : edge), Edges.In e E ->
+            (Vertices.In (fst e) V) /\ (Vertices.In (snd e) V). 
 
   Record Graph :=
     mkgraph {
-        V : v_set;
-        E : e_set;
-        o : ok V E
+        graphVertices: v_set; 
+        graphEdges : e_set;
+        graphOk : ok graphVertices graphEdges
       }.
-
-  Definition t := Graph.
   
   Notation vertex := Vertices.elt.
   
   Definition buildEdge (n n1 : vertex): Edges.elt :=
     (n,n1).
 
-  (*   Notation "[ ]" := Edges.empty. *)
-
-  (* Notation "[ elt0 , .. , eltn ]" := (Edges.add elt0 .. (Edges.add eltn (Edges.empty )) .. ) (at level 60, right associativity). *)
-
+  Definition t := Graph.
 
   Open Scope positive_scope.
 
-
-
-  Definition empty := mkgraph Vertices.empty Edges.empty emp_ok.
-
-
-
-    
-
-
-
-  (* Definition destructEdge : edge -> (vertex * vertex) := *)
-  (*   fun X : edge => let (p, p0) := X in buildEdge p p0. *)
-
-
-
-
+  Program Definition empty := mkgraph Vertices.empty Edges.empty _.
+  Next Obligation.
+  unfold ok.
+  intros.
+  inversion H.
+  Qed.
+  
   Definition buildPair : vertex -> vertex -> vertex * vertex :=
     fun x y => (x,y).
 
-  
-Definition destructEdge : Edge.t -> (vertex * vertex) :=
-  fun X : Edge.t => let (p, p0) := X in (p, p0).
-
-  (* intros. *)
-  (* destruct X. *)
-  (* exact (p, p0). *)
-(*Defined.*)
-
-
+  Definition destructEdge : Edge.t -> (vertex * vertex) :=
+    fun X : Edge.t => let (p, p0) := X in (p, p0).
 
   Definition isemptyP : v_set -> e_set -> Prop :=
     fun (x : v_set) (y : e_set) => Vertices.Empty x  /\ Edges.Empty y.
 
-
-
   Definition  IsEmpty : Graph -> Prop :=
-    fun X : Graph =>
-      match X with
-      | {| V := V0; E := e0; ok := p |} => Vertices.Empty V0  /\ Edges.Empty e0
-      end.
+    fun G : Graph =>
+      Vertices.Empty (graphVertices G) /\ Edges.Empty (graphEdges G).
 
   Definition IsVertex : Vertices.elt -> Graph -> Prop :=
-    fun (n : Vertices.elt) (g : Graph)  =>
-      match g with
-      | {| V:= v; E := e0; ok := p |} => Vertices.In n v
-      end.
+    fun (n : Vertices.elt) (G : Graph)  =>
+      Vertices.In n (graphVertices G).
 
   Definition IsEdge : Edges.elt -> Graph -> Prop :=
-    fun (e : Edges.elt) (g : Graph) =>
-      match g with
-      | {| V := v; E := e0; ok := p |} => Edges.In e e0
-      end.
-  
+    fun (e : Edges.elt) (G : Graph) => 
+      Edges.In e (graphEdges G).
+
     Definition isEmpty : Graph -> bool :=
-      fun (g : Graph) =>
-        match g with
-        | {| V := v; E := e; ok := p |} =>
-          andb (Vertices.is_empty v) (Edges.is_empty e)
-        end.
+      fun (G : Graph) => andb (Vertices.is_empty (graphVertices G))
+                              (Edges.is_empty (graphEdges G)).
 
     Definition isVertex : Vertices.elt -> Graph -> bool :=
-      fun (n : Vertices.elt) (g : Graph)  =>
-        match g with
-        | {| V:= v; E := e0; ok := p |} => Vertices.mem n v
-        end.
+      fun (v : Vertices.elt) (G : Graph)  =>
+        Vertices.mem v (graphVertices G).
 
     Definition isEdge : Edges.elt -> Graph -> bool :=
-      fun (e : Edges.elt) (g : Graph) =>
-        match g with
-        | {| V := v; E := e0; ok := p |} => Edges.mem e e0
-        end.
+      fun (e : Edges.elt) (G : Graph) =>
+        Edges.mem e (graphEdges G).
 
     Lemma IsEmpty_reflect :
       forall G : Graph, reflect (IsEmpty G) (isEmpty G).
@@ -255,7 +216,6 @@ Definition destructEdge : Edge.t -> (vertex * vertex) :=
       rewrite <- Edges.is_empty_spec.
       split; intros; try apply andb_true_iff; auto.
     Qed.
-
 
     Lemma IsVertex_reflect :
       forall (G : Graph) (v : node),
@@ -279,17 +239,11 @@ Definition destructEdge : Edge.t -> (vertex * vertex) :=
     Qed.
     
     Definition enumVertices : Graph -> Vertices.t :=
-      fun (g : Graph) =>
-        match g with
-        | {| V := v; E := e; ok := p |} =>  v
-        end.
+      fun (g : Graph) => graphVertices g.
     
     Definition enumEdges : Graph -> Edges.t :=
-      fun (g : Graph) =>
-        match g with
-        | {| V := v; E := e |} => e
-        end.
-    
+      fun (G : Graph) => (graphEdges G).
+
     Lemma Empty : IsEmpty empty.
     Proof.
       unfold empty.
@@ -321,29 +275,164 @@ Definition destructEdge : Edge.t -> (vertex * vertex) :=
     Proof.
       intros [V E] v; split; simpl; intros; auto.
     Qed.
+
     Lemma IsEdgeEnum :
      forall (G : t) (e : Edges.elt), IsEdge e G <-> Edges.In e (enumEdges G).
     Proof.
       intros [V E] v; split; simpl; intros; auto.
     Qed.
 
-
     Lemma Edge_exists1 :
      forall (G : t) (e : Edges.elt),
      IsEdge e G -> IsVertex (fst (destructEdge e)) G.
     Proof.
-      intros [V E] e H.
-      simpl in *.
+      intros G e H.
       unfold destructEdge.
+      destruct G.
+      unfold IsVertex.
+      unfold IsEdge in H.
+      simpl in *.
+      specialize (graphOk0 e H).
       destruct e.
-      simpl.
-      Admitted.
-      
+      apply graphOk0.
+    Qed.
+
+
     Lemma Edge_exists2 :
     forall G e, IsEdge e G -> IsVertex (snd (destructEdge e)) G.
     Proof.
       intros.
-      
+      unfold destructEdge, IsVertex, IsEdge in *.
+      destruct G.
+      simpl in *.
+      specialize (graphOk0 e H).
+      destruct e.
+      apply graphOk0.
+    Qed.
+
+    Program Definition addVertex  (v : vertex) (G : t) : t :=
+      mkgraph (Vertices.add v (graphVertices G)) (graphEdges G) _.
+    Next Obligation.
+      destruct G.
+      unfold ok in *.
+      simpl.
+      intros.
+      specialize (graphOk0 e H).
+      split;
+        apply Vertices.add_spec;
+        right;
+        apply graphOk0.
+    Qed.
+
+    Lemma add_ok : forall e G,
+        (Vertices.mem (fst e) (graphVertices G) &&
+                      Vertices.mem (snd e) (graphVertices G) = true) ->
+        ok (graphVertices G) (Edges.add e (graphEdges G)).
+    Proof.
+      intros.
+      apply andb_true_iff in H.
+      unfold ok.
+      intros.
+      apply Edges.add_spec in H0.
+      destruct H0.
+      rewrite  H0.
+      do 2 rewrite Vertices.mem_spec in H.
+      auto.
+      destruct G.
+      simpl in *.
+      specialize (graphOk0 e0 H0).
+      auto.
+    Qed.
+
+
+    Definition addEdge (e : edge) (G : t) :t.
+      case_eq (Vertices.mem (fst e) (graphVertices G) &&
+                            Vertices.mem (snd e) (graphVertices G)).
+      intros.
+      exact (mkgraph (graphVertices G)
+                     (Edges.add e (graphEdges G)) (add_ok e G H)).
+      intros _.
+      exact G.
+    Defined.
+    Print addEdge.
+
+    Parameter removeVertex : vertex -> t -> t. 
+    Parameter removeEdge : edge -> t -> t.
+
+
+    Lemma addVertex_spec1 :
+      forall G v, IsVertex v (addVertex v G).
+    Proof.
+      intros [V G pf] v.
+      unfold IsVertex.
+      simpl.
+      apply Vertices.add_spec.
+      auto.
+    Qed.
+
+    Lemma addVertex_spec2 :
+      forall G v1 v2, ~ Vertices.E.eq v1 v2 ->
+                      IsVertex v1 G <-> IsVertex v1 (addVertex v2 G).
+    Proof.
+      intros [V E pf] v1 v2 H. 
+      unfold IsVertex.
+      simpl.
+      unfold not in H.
+      split; intros; auto.
+      apply Vertices.add_spec.
+      auto.
+      apply Vertices.add_spec in H0.
+      destruct H0; auto.
+      apply H in H0.
+      destruct H0.
+    Qed.
+
+    Lemma addVertex_spec3 :
+      forall G v e,
+        IsEdge e G <-> IsEdge e (addVertex v G).
+    Proof.
+      intros [V E pf] v e.
+      unfold IsEdge.
+      simpl.
+      split; intros; auto.
+    Qed.
+    
+    (*This is either wrong or could be written better*)
+    Lemma addEdge_does_something : forall e G G1,
+        (addEdge e G) = G1 ->                                                  (~(Vertices.In (fst (destructEdge e)) (graphVertices G) /\
+       Vertices.In (snd (destructEdge e)) (graphVertices G)) /\ G1 = G)                    \/ Edges.In e (graphEdges G1).
+    Proof.
+      intros.
+      unfold not;intros.
+      destruct addEdge in H.
+      right.
+      unfold ok in graphOk0.
+      unfold graphEdges.
+      destruct G1.
+    Admitted.
+    
+    Lemma addEdge_spec1 :
+      forall G e,
+        IsVertex (fst (destructEdge e)) G->
+        IsVertex (snd (destructEdge e)) G->
+        IsEdge e (addEdge e G).
+    Proof.
+      intros [V E pf] e H H1.
+      unfold IsVertex in *.
+      unfold IsEdge in *.
+      simpl in *.
+      destruct  (addEdge e ({| graphVertices := V; graphEdges := E; graphOk := pf |})) eqn:H2.
+      simpl.
+      apply addEdge_does_something in H2.
+      simpl in *.
+      unfold not in H2.
+      destruct H2.
+      destruct H0.
+      assert (False).
+      apply (H0 (conj H H1)).
+      destruct H3.
+      auto.
+    Qed.
 
 
 End myGraph.  
@@ -351,25 +440,9 @@ End myGraph.
 
   
   (** Elementary Graph Operations **)
-  Parameter addVertex : vertex -> t -> t.
-  Parameter addEdge : edge -> t -> t.
-  Parameter removeVertex : vertex -> t -> t. 
-  Parameter removeEdge : edge -> t -> t.
+
 
   (** Specifications of these graph operations **)
-  Parameter addVertex_spec1 :
-    forall G v, IsVertex v (addVertex v G).
-  Parameter addVertex_spec2 :
-    forall G v1 v2, v1 <v> v2 ->
-      IsVertex v1 G <-> IsVertex v1 (addVertex v2 G).
-  Parameter addVertex_spec3 :
-    forall G v e,
-      IsEdge e G <-> IsEdge e (addVertex v G).
-  Parameter addEdge_spec1 :
-    forall G e,
-      IsVertex (fst (destructEdge e)) G->
-      IsVertex (snd (destructEdge e)) G->
-        IsEdge e (addEdge e G).
   Parameter addEdge_spec2 :
      forall G e1 e2, e1 <e> e2 ->
       IsEdge e1 G <-> IsEdge e1 (addEdge e2 G).
