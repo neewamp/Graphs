@@ -256,7 +256,6 @@ Module myGraph : DirectedGraphs.
     Notation "e1 <e> e2" := (~ Edges.E.eq e1 e2) (at level 60). 
 
 
-
     Program Definition removeVertex  (v : vertex) (G : t) : t :=
       let newE := Edges.filter (fun x => (negb (Pos.eqb (fst x) v)) &&  negb (Pos.eqb (snd x)  v)) (graphEdges G) in
       mkgraph (Vertices.remove v (graphVertices G)) (newE) _.
@@ -364,10 +363,6 @@ Module myGraph : DirectedGraphs.
       auto.
     Qed.
 
-
-
-
-    
   Lemma addEdge_spec2 :
     forall G e1 e2, e1 <e> e2 ->
                     IsEdge e1 G <-> IsEdge e1 (addEdge e2 G).
@@ -476,14 +471,13 @@ Module myGraph : DirectedGraphs.
       rewrite Pos.eqb_neq in H,H0.
       auto.
     Qed.
-    
-    Lemma removeVertex_spec4 :
+
+    Parameter removeVertex_spec4 :
     forall G v e,
       IsEdge e G ->
         (fst (destructEdge e) =v= v) \/
         (snd (destructEdge e) =v= v) ->
           ~ IsEdge e (removeVertex v G).
-    Proof.
     (*   intros G v e H H0 Hnot. *)
     (*   destruct e. *)
     (*   simpl in *. *)
@@ -506,7 +500,7 @@ Module myGraph : DirectedGraphs.
     (*   auto. *)
     (*   apply annoyingProper. *)
     (* Qed. *)
-      Admitted.
+      (* Admitted. *)
     Lemma removeEdge_spec1 :
     forall G e, ~ IsEdge e (removeEdge e G).
     Proof.
@@ -531,7 +525,7 @@ Module myGraph : DirectedGraphs.
       destruct Hnot.
       unfold not in H.
       apply H.
-      admit.      
+      constructor; auto.
       auto.
       unfold graphEdges in *.
       simpl in *.
@@ -540,8 +534,7 @@ Module myGraph : DirectedGraphs.
       apply Edges.remove_spec in H0.
       destruct H0.
       auto.
-    Admitted.
-
+    Qed.
     Lemma removeEdge_spec3 :
     forall G v e,
       IsVertex v G <-> IsVertex v (removeEdge e G).
@@ -549,7 +542,10 @@ Module myGraph : DirectedGraphs.
       reflexivity.
     Qed.
 
-Print Universes.
+    Definition g := addEdge (1,3) (addVertex 3 (addVertex 1 empty)).
+    Compute enumEdges g.
+    
+
 End myGraph.  
   
 
