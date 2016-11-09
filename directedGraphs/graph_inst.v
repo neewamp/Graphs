@@ -232,7 +232,16 @@ Module myGraph : DirectedGraphs.
       intros _.
       exact G.
     Defined.
-    Print addEdge.
+
+    Program Definition addEdge' (e : edge) (G : t) : t :=
+      match (Vertices.mem (fst e) (graphVertices G) &&
+             Vertices.mem (snd e) (graphVertices G)) with
+      | true => mkgraph (graphVertices G)
+                        (Edges.add e (graphEdges G))
+                        (add_ok e G _)
+      | false => G
+      end.
+
 
     Lemma annoyingProper : forall v,
       Proper (eq * eq ==> eq)
@@ -344,23 +353,12 @@ Module myGraph : DirectedGraphs.
       forall G e,
         IsVertex (fst (destructEdge e)) G->
         IsVertex (snd (destructEdge e)) G->
-        IsEdge e (addEdge e G).
+        IsEdge e (addEdge' e G).
     Proof.
-      intros [V E pf] e H H1.
-      unfold IsVertex in *.
-      unfold IsEdge in *.
-      simpl in *.
-      destruct  (addEdge e ({| graphVertices := V; graphEdges := E; graphOk := pf |})) eqn:H2.
-      simpl.
-      apply addEdge_does_something in H2.
-      simpl in *.
-      unfold not in H2.
-      destruct H2.
-      destruct H0.
-      assert (False).
-      apply (H0 (conj H H1)).
-      destruct H3.
-      auto.
+      intros G e H H1.
+      unfold addEdge'.
+      elimtype.
+      inversion.
     Qed.
 
   Lemma addEdge_spec2 :

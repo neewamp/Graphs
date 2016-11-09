@@ -30,7 +30,7 @@ Module Type DirectedGraphs.
   Notation "e1 <e> e2" := (~ Edges.E.eq e1 e2) (at level 60). 
   (** Basic elements **)
     (* The type of graphs *)
-  Parameter t : Set.
+  Parameter t : Type.
     (* the empty graph *)
   Parameter empty : t.  
   Parameter buildEdge : vertex -> vertex -> edge.
