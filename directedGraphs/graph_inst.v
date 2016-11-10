@@ -258,7 +258,7 @@ Module myGraph : DirectedGraphs.
       destruct H; auto.
     Qed.
 
-    Program Definition addEdge' (e : edge) (G : t) : t :=
+    Program Definition addEdge (e : edge) (G : t) : t :=
       if (Vertices_in_dec e G)
         then mkgraph (graphVertices G)
                      (Edges.add e (graphEdges G))
@@ -365,31 +365,62 @@ Module myGraph : DirectedGraphs.
       forall G e,
         IsVertex (fst (destructEdge e)) G->
         IsVertex (snd (destructEdge e)) G->
-        IsEdge e (addEdge' e G).
+        IsEdge e (addEdge e G).
     Proof.
-      intros G e. unfold addEdge'; intros.
+      intros G e. unfold addEdge; intros.
       destruct (Vertices_in_dec e G).
-
+      unfold IsEdge.
+      simpl.
+      apply Edges.add_spec.
+      auto.
+      unfold IsVertex in *.
+      destruct e.
+      unfold not in n.
+      assert (False).
+      apply n.
+      auto.
+      destruct H1.
     Qed.
-
+      
   Lemma addEdge_spec2 :
     forall G e1 e2, e1 <e> e2 ->
                     IsEdge e1 G <-> IsEdge e1 (addEdge e2 G).
   Proof.
     intros.
-    split;
-    intros.
-    unfold IsEdge in *.
-    unfold graphEdges in *.
-    destruct (addEdge e2 G) eqn:H1.
+    split; unfold addEdge; intros; unfold IsEdge; simpl.
+    destruct (Vertices_in_dec e2 G).
+    simpl.
+    apply Edges.add_spec.
+    auto.
+    auto.
+    unfold graphEdges.
     destruct G.
-    (* specialize (graphOk0 e1 H0). *)
-    Admitted.
+    simpl in *.
+    destruct (Vertices_in_dec e2) in H0.
+    simpl in *.
+    unfold IsEdge in H0.
+    simpl in H0.
+    apply Edges.add_spec in H0.
+    destruct H0; auto.
+    unfold not in H.
+    assert (False).
+    apply H.
+    auto. destruct H1.
+    auto.
+  Qed.
+
 
   Lemma addEdge_spec3 : forall G v e,
     IsVertex v G <-> IsVertex v  (addEdge e G).
   Proof.
-    Admitted.
+    intros.
+    split; unfold IsVertex, addEdge; intros.
+    destruct (Vertices_in_dec e G).
+    simpl.
+    auto.
+    auto.
+    destruct (Vertices_in_dec e G) in H; auto.
+  Qed.
 
   Lemma removeVertex_spec1 :
     forall G v, ~ IsVertex v (removeVertex v G).
@@ -402,7 +433,7 @@ Module myGraph : DirectedGraphs.
     unfold not in H0.
     auto.
   Qed.
-  (* ~Vertices.E.eq v1 v2 *)
+
   Lemma removeVertex_spec2 :
     forall G v1 v2, v1 <v> v2 ->
       IsVertex v1 G <-> IsVertex v1 (removeVertex v2 G).
@@ -481,35 +512,35 @@ Module myGraph : DirectedGraphs.
       auto.
     Qed.
 
-    Parameter removeVertex_spec4 :
+    Lemma  removeVertex_spec4 :
     forall G v e,
       IsEdge e G ->
         (fst (destructEdge e) =v= v) \/
         (snd (destructEdge e) =v= v) ->
           ~ IsEdge e (removeVertex v G).
-    (*   intros G v e H H0 Hnot. *)
-    (*   destruct e. *)
-    (*   simpl in *. *)
-    (*   destruct H0; *)
-    (*   unfold IsEdge in Hnot. *)
-    (*   apply Edges.filter_spec in Hnot. *)
-    (*   destruct Hnot. *)
-    (*   apply andb_true_iff in H2. *)
-    (*   do 2 rewrite negb_true_iff in H2. *)
-    (*   destruct H2. *)
-    (*   rewrite Pos.eqb_neq in H2,H3. *)
-    (*   auto. *)
-    (*   apply annoyingProper. *)
-    (*   apply Edges.filter_spec in Hnot. *)
-    (*   destruct Hnot. *)
-    (*   apply andb_true_iff in H2. *)
-    (*   do 2 rewrite negb_true_iff in H2. *)
-    (*   destruct H2. *)
-    (*   rewrite Pos.eqb_neq in H2,H3. *)
-    (*   auto. *)
-    (*   apply annoyingProper. *)
-    (* Qed. *)
-      (* Admitted. *)
+      intros G v e H H0 Hnot.
+      destruct e.
+      simpl in *.
+      destruct H0;
+      unfold IsEdge in Hnot.
+      apply Edges.filter_spec in Hnot.
+      destruct Hnot.
+      apply andb_true_iff in H2.
+      do 2 rewrite negb_true_iff in H2.
+      destruct H2.
+      rewrite Pos.eqb_neq in H2,H3.
+      auto.
+      apply annoyingProper.
+      apply Edges.filter_spec in Hnot.
+      destruct Hnot.
+      apply andb_true_iff in H2.
+      do 2 rewrite negb_true_iff in H2.
+      destruct H2.
+      rewrite Pos.eqb_neq in H2,H3.
+      auto.
+      apply annoyingProper.
+    Qed.
+
     Lemma removeEdge_spec1 :
     forall G e, ~ IsEdge e (removeEdge e G).
     Proof.
@@ -554,6 +585,9 @@ Module myGraph : DirectedGraphs.
     Definition g := addEdge (1,3) (addVertex 3 (addVertex 1 empty)).
     Compute enumEdges g.
     
+    Definition graph1 :=  (addEdge (1,2) (addEdge (1,3) (addVertex 1 (addVertex 2 (addVertex 3 (addVertex 4 (addVertex 5 empty))))))).
+                            
+    Definition graph2 :=  (addEdge (1,2) (addEdge (1,3) (addVertex 1 (addVertex 2 (addVertex 3 (addVertex 4 (addVertex 5 empty))))))).
 
 End myGraph.  
   
