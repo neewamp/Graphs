@@ -204,44 +204,70 @@ Module myGraph : DirectedGraphs.
     Qed.
 
     Lemma add_ok : forall e G,
-        (Vertices.mem (fst e) (graphVertices G) &&
-                      Vertices.mem (snd e) (graphVertices G) = true) ->
-        ok (graphVertices G) (Edges.add e (graphEdges G)).
+        Vertices.In (fst e) (graphVertices G) ->
+        Vertices.In (snd e) (graphVertices G) ->
+          ok (graphVertices G) (Edges.add e (graphEdges G)).
     Proof.
-      intros.
-      apply andb_true_iff in H.
       unfold ok.
-      intros.
-      apply Edges.add_spec in H0.
-      destruct H0.
-      rewrite  H0.
-      do 2 rewrite Vertices.mem_spec in H.
-      auto.
+      intros. apply Edges.add_spec in H1;
+      destruct e; destruct e0;
+      destruct H1.
+      inversion H1;  inversion H2; inversion H3; simpl in *; auto.
+      simpl.
       destruct G.
       simpl in *.
-      specialize (graphOk0 e0 H0).
+      specialize (graphOk0 _ H1).
       auto.
     Qed.
 
-    Definition addEdge (e : edge) (G : t) :t.
-      case_eq (Vertices.mem (fst e) (graphVertices G) &&
-                            Vertices.mem (snd e) (graphVertices G)).
+    Lemma Vertices_in_dec1 : forall (e : vertex*vertex) G,
+      {Vertices.In (fst e) (graphVertices G)} +
+      {~ Vertices.In (fst e) (graphVertices G)}.
+    Proof.
       intros.
-      exact (mkgraph (graphVertices G)
-                     (Edges.add e (graphEdges G)) (add_ok e G H)).
-      intros _.
-      exact G.
-    Defined.
+      case_eq (Vertices.mem (fst e) (graphVertices G));
+      intros H.
+      rewrite Vertices.mem_spec in H; left; auto.
+      right; intros H1. rewrite <- Vertices.mem_spec in H1.
+      rewrite H in H1. inversion H1.
+    Qed.
+
+    Lemma Vertices_in_dec2 : forall (e : vertex*vertex) G,
+      {Vertices.In (snd e) (graphVertices G)} +
+      {~ Vertices.In (snd e) (graphVertices G)}.
+    Proof.
+      intros.
+      case_eq (Vertices.mem (snd e) (graphVertices G));
+      intros H.
+      rewrite Vertices.mem_spec in H; left; auto.
+      right; intros H1. rewrite <- Vertices.mem_spec in H1.
+      rewrite H in H1. inversion H1.
+    Qed.
+
+    Lemma Vertices_in_dec : 
+          forall (e : vertex*vertex) G,
+            {Vertices.In (fst e) (graphVertices G) /\
+              Vertices.In (snd e) (graphVertices G)} +
+            {~ (Vertices.In (fst e) (graphVertices G) /\
+              Vertices.In (snd e) (graphVertices G))}.
+    Proof.
+      intros.
+      destruct (Vertices_in_dec1 e G);
+      destruct (Vertices_in_dec2 e G);
+      [left; auto | right | right | right]; intros H;
+      destruct H; auto.
+    Qed.
 
     Program Definition addEdge' (e : edge) (G : t) : t :=
-      match (Vertices.mem (fst e) (graphVertices G) &&
-             Vertices.mem (snd e) (graphVertices G)) with
-      | true => mkgraph (graphVertices G)
-                        (Edges.add e (graphEdges G))
-                        (add_ok e G _)
-      | false => G
-      end.
-
+      if (Vertices_in_dec e G)
+        then mkgraph (graphVertices G)
+                     (Edges.add e (graphEdges G))
+                     _
+        else G.
+    Next Obligation.
+    Proof.
+      apply add_ok; auto.
+    Defined.
 
     Lemma annoyingProper : forall v,
       Proper (eq * eq ==> eq)
@@ -334,31 +360,16 @@ Module myGraph : DirectedGraphs.
       simpl.
       split; intros; auto.
     Qed.
-    
-    (*This is either wrong or could be written better*)
-    Lemma addEdge_does_something : forall e G G1,
-        (addEdge e G) = G1 ->                                                  (~(Vertices.In (fst (destructEdge e)) (graphVertices G) /\
-       Vertices.In (snd (destructEdge e)) (graphVertices G)) /\ G1 = G)                    \/ Edges.In e (graphEdges G1).
-    Proof.
-      intros.
-      unfold not;intros.
-      destruct addEdge in H.
-      right.
-      unfold ok in graphOk0.
-      unfold graphEdges.
-      destruct G1.
-    Admitted.
-    
+        
     Lemma addEdge_spec1 :
       forall G e,
         IsVertex (fst (destructEdge e)) G->
         IsVertex (snd (destructEdge e)) G->
         IsEdge e (addEdge' e G).
     Proof.
-      intros G e H H1.
-      unfold addEdge'.
-      elimtype.
-      inversion.
+      intros G e. unfold addEdge'; intros.
+      destruct (Vertices_in_dec e G).
+
     Qed.
 
   Lemma addEdge_spec2 :
