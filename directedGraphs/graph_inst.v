@@ -1,7 +1,7 @@
-Require Import DirectedGraphs.
+Require Import DirectedGraphs Ascii ExtrOcamlString.
 Require Import MSets MSetFacts PArith.
 
-Module myGraph : DirectedGraphs.
+Module myGraph <: DirectedGraphs.
   
   Require Import MSetAVL.
   Require Import ZArith.
@@ -593,10 +593,35 @@ Module myGraph : DirectedGraphs.
     Edges.fold (fun edge e =>
                   if Pos.eqb (fst edge) v then Vertices.add (snd edge) e
                   else e) (enumEdges G) Vertices.empty.
-Compute  (neighborhood 1 graph2). 
+  Definition test := map ascii_of_pos (Vertices.elements (neighborhood 1 graph2)).
 
 End myGraph.
 
+(* Extract Constant myGraph.test =>  *)
+
+
+Extract Inductive bool => "bool" [ "true" "false" ].
+ Extraction "myGraph.ml"  myGraph.
+(*let rec mmap f l =
+  (match l with
+  | Nil -> Nil
+  | Cons (h, t) -> Cons (f h, (mmap f t)))
+  
+let rec int_of_pos p =
+  (match p with
+   |XH -> 1
+   |XO p' -> 2 * (int_of_pos p')
+   |XI p' -> 2* (int_of_pos p') + 1)
+
+
+let rec printer l =
+  (match l with
+  | Nil -> Printf.printf " "
+  | Cons (h, t) -> Printf.printf "%d " h; printer t)
+  
+  let () = 
+    printer (mmap int_of_pos (Coq_myGraph.Vertices.elements (Coq_myGraph.neighborhood XH Coq_myGraph.graph2)));;
+*)
 
   
 
