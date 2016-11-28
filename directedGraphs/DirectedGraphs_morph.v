@@ -140,24 +140,40 @@ Module Type DirectedGraphMorph.
     Proof.
       intros e1 e2 H0 G1 G2 H1.
       constructor; intros e.
-     {
+      {
         do 2 rewrite <- IsVertexEnum;
         do 2 rewrite <- addEdge_spec3;
         rewrite H1. split; auto.
       }
       {
+        do 2 rewrite <- IsEdgeEnum.
         case (Edges.E.eq_dec e e1); intros H2.
         {
-          rewrite H2.
-          do 2 rewrite <- IsEdgeEnum;
-          split; intros H3.
-          replace e2 with e1.
-          erewrite with IsEdges_morph H3.
-          admit. admit.
+          rewrite H2. split; intros H3;
+          [rewrite H0; rewrite H0 in H3 at 1 |];
+          apply addEdge_spec1.
+          apply Edge_exists1 in H3.
+          apply addEdge_spec3 in H3.
+          rewrite <- H1; auto.
+          apply Edge_exists2 in H3.
+          apply addEdge_spec3 in H3.
+          rewrite <- H1; auto.
+          apply Edge_exists1 in H3.
+          apply addEdge_spec3 in H3.
+          rewrite H1; auto.
+          apply Edge_exists2 in H3.
+          apply addEdge_spec3 in H3.
+          rewrite H1; auto.
         }
-        admit.
+        {
+          split; intros H3;
+          apply addEdge_spec2 in H3; auto. apply addEdge_spec2.
+          rewrite <- H0; auto. rewrite <- H1; auto.
+          apply addEdge_spec2; auto. rewrite <- H1 in H3; auto.
+          rewrite <- H0; auto.
+        }
       }
-    Admitted.
-  
+  Qed.
 
+  
 End DirectedGraphFacts.
