@@ -1,4 +1,14 @@
-(* Thingsxx we need:
+(*
+  This module implements the most general
+  form of our graphs. These unidrected
+  graphs satisfy the following properties :
+
+  (** Fill these in **)
+  (* How do we ensure our graphs are simple? *)
+
+*)
+
+(* Things we need:
     - Ordering over sets
     - Interface for directed graphs, undirected graphs, simple graphs,
         hypergraphs.
@@ -120,6 +130,3 @@ Module Type DirectedGraphs.
     forall G v e,
       IsVertex v G <-> IsVertex v (removeEdge e G).
 End DirectedGraphs.
-
-
-
