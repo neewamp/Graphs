@@ -1,7 +1,0 @@
-"Rule: ocaml dependencies ml (%=test )": "\025:\218\026\011\180\187c\139\223\019P\221\251\020d"
-"Resource: /home/nate/Documents/repos/Graphs/tests/test.ml": "\021J\014v;Ft\202]Cg\252O\163\025\007"
-"Rule: ocaml: ml & cmi -> cmx & o (%=test )": "^$?\183\190\227|\218\180\146G9,\001z\221"
-"Rule: ocaml dependencies mli (%=test )": "N6m\146\152\026\028\1598\212 \152\158X\198_"
-"Rule: ocaml: mli -> cmi (%=test )": "CT\216)N\011{m\011\163\132\130\128x\183'"
-"Resource: /home/nate/Documents/repos/Graphs/tests/test.mli": "\236\142\140\214\183\254jNOd\152?d;5_"
-"Rule: ocaml: cmx* & o* -> native (%=test )": "Be\239\207\190K\136\247\216\210,\227\227\026\163'"
