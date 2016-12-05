@@ -1,14 +1,13 @@
 (* This file implements a number of (endo?)morphisms? *)
 Require Import DirectedGraphs.
-Require Import Setoid.
+Require Import Setoid Bool MSetProperties.
 (* Need to make sure this doesn't pollute the definitions in bool_scope *)
-Require Import Bool.
+
 Open Scope bool.
 
 Module Type DirectedGraphMorph.
   Declare Module Import DG : DirectedGraphs.
 
-  Section Equality.
     Inductive EqualGraph : t -> t -> Prop :=
     | GraphEQ : forall g1 g2,
                   (enumVertices g1) =V= (enumVertices g2) ->
@@ -21,6 +20,9 @@ Module Type DirectedGraphMorph.
         Edges.equal (enumEdges G1) (enumEdges G2).
 
     Notation "G1 =G= G2" := (EqualGraph G1 G2) (at level 60).
+
+    Definition Respectful (A : Type) (f : t -> A) : Prop :=
+      forall G1 G2, G1 =G= G2 -> f G1 = f G2.
 
     Lemma EqualGraphP G1 G2 : reflect (G1 =G= G2) (equalGraph G1 G2).
     Proof.
@@ -47,9 +49,7 @@ Module Type DirectedGraphMorph.
     Proof.
       intros G1 G2 H; destruct H as [H0 H1]; auto.
     Qed.
-  End Equality.
 
-  Section Rewriting.
   (* Relational proofs for easier rewriting *)
     Lemma EqualGraph_equiv : Equivalence EqualGraph.
     Proof.
@@ -175,5 +175,96 @@ Module Type DirectedGraphMorph.
       }
   Qed.
 
+  Module Import VertProperties := OrdProperties Vertices.
+  Module Import EdgeProperties := OrdProperties Edges.
+
+  Section GraphInduction.
+  Inductive GraphConst1 : t -> Prop :=
+  | EmptyGraph1 : GraphConst1 empty
+  | AddVert1 : forall G v, (GraphConst1 G) -> GraphConst1 (addVertex v G)
+  | AddEdge1 : forall G e, (GraphConst1 G) -> GraphConst1 (addEdge e G).
+
+(* These definitions could use to be somewhere else *)
+  Definition addVertices V G : t :=
+    Vertices.fold (fun v g => addVertex v g) V G.
+
+  Definition addEdges E G : t :=
+    Edges.fold (fun e G => addEdge e G) E G.
+
+(* Same for these lemmas *)
+  Lemma addVertex_pres :
+    forall v1 v2 G, IsVertex v1 G ->
+      IsVertex v1 (addVertex v2 G).
+  Proof.
+    intros v1 v2 G H.
+    case (Vertices.E.eq_dec v1 v2); intros H2.
+    rewrite H2. apply addVertex_spec1.
+    apply addVertex_spec2; auto.
+  Qed.
+
+  Lemma addVertices_pres :
+    forall v V G, IsVertex v G ->
+      IsVertex v  (addVertices V G).
+  Proof.
+    intros v V G H.
+    unfold addVertices.
+    apply VertProperties.P.fold_rec_weak; try (auto; fail).
+    intros x a s s' H0. apply addVertex_pres; auto.
+  Qed.
+
+ (* Is there a term for possessing the added elements? *)
+  Lemma addVertices_spec :
+    forall v V G, Vertices.In v V -> IsVertex v (addVertices V G).
+  Proof.
+    intros v V G. unfold addVertices. 
+    apply VertProperties.P.fold_rec_weak.
+    intros s s' H0 H1 H2 H3. rewrite H1 in H2. apply H2; auto.
+    intros H. apply Vertices.empty_spec in H; contradiction.
+    intros x a s H0 H1 H2. case (Vertices.E.eq_dec v x); intros H3.
+    rewrite H3; apply addVertex_spec1.
+    apply addVertex_spec2; auto. apply H1. apply Vertices.add_spec in H2.
+    case H2; auto. intros H4. apply H3 in H4. contradiction.
+  Qed.
+    
+  (* Rebuilds the graph according to the graph const *)
+  Definition rebuildGraph_GraphConst1 G : t :=
+    addEdges (enumEdges G) (addVertices (enumVertices G) empty).
   
-End DirectedGraphFacts.
+  Lemma rebuildGraph_GraphConst1_spec1 :
+    forall G, (rebuildGraph_GraphConst1 G) =G= G.
+  Proof.
+    intros G. constructor.
+    {
+      constructor; intros H.
+  Admitted.
+
+  Lemma rebuildGraph_GraphConst1_spec2 :
+    forall G, GraphConst1 (rebuildGraph_GraphConst1 G).
+  Proof.
+    intros G. unfold rebuildGraph_GraphConst1, addEdges, addVertices.
+        
+  Admitted.
+
+  Print Respectful.
+  Lemma ind1 (P : t -> Prop) (H0 : Respectful _ P) :
+    P empty -> 
+    (forall x g, P g -> P (addVertex x g)) ->
+    (forall x g, P g -> P (addEdge x g)) ->
+    forall g, P g.
+  Admitted.
+  
+  Lemma rec1 (P : t -> Set) ( H0 : Respectful _ P) :
+    P empty -> 
+    (forall x g, P g -> P (addVertex x g)) ->
+    (forall x g, P g -> P (addEdge x g)) ->
+      forall g, P g.
+  Admitted.
+
+  Lemma rect1 :
+    forall (P : t -> Type) (H0 : Respectful _ P),
+      P empty -> 
+      (forall x g, P g -> P (addVertex x g)) ->
+      (forall x g, P g -> P (addEdge x g)) ->
+        forall g, P g.
+  Admitted.
+  End GraphInduction.
