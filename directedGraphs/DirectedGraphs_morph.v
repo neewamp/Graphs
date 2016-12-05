@@ -212,8 +212,29 @@ Module Type DirectedGraphMorph.
     intros x a s s' H0. apply addVertex_pres; auto.
   Qed.
 
+  Lemma addEdge_pres :
+    forall e1 e2 G, IsEdge e1 G ->
+      IsEdge e1 (addEdge e2 G).
+  Proof.
+    intros e1 e2 G H0.
+    case (Edges.E.eq_dec e1 e2); intros H2.
+    rewrite H2. apply addEdge_spec1.
+    apply Edge_exists1. rewrite <- H2; auto.
+    apply Edge_exists2. rewrite <- H2; auto.
+    apply addEdge_spec2; auto.
+  Qed.
+
+  Lemma addEdges_pres :
+    forall e E G, IsEdge e G ->
+      IsEdge e (addEdges E G).
+  Proof.
+    intros. unfold addEdges. apply EdgeProperties.P.fold_rec_weak;
+    try solve [auto | split; auto].
+    intros e1 g V H0 H1. apply addEdge_pres; auto.
+  Qed.
+
  (* Is there a term for possessing the added elements? *)
-  Lemma addVertices_spec :
+  Lemma addVertices_spec1 :
     forall v V G, Vertices.In v V -> IsVertex v (addVertices V G).
   Proof.
     intros v V G. unfold addVertices. 
@@ -225,7 +246,27 @@ Module Type DirectedGraphMorph.
     apply addVertex_spec2; auto. apply H1. apply Vertices.add_spec in H2.
     case H2; auto. intros H4. apply H3 in H4. contradiction.
   Qed.
+
+  Lemma addVertices_spec2 :
+    forall e V G, IsEdge e (addVertices V G) <-> IsEdge e G.
+  Proof.
+    intros e V G.
+    unfold addVertices.
+    apply VertProperties.P.fold_rec_weak; try solve [auto | split; auto].
+    intros s s' G1 H0 H1; auto. rewrite <- H1.
+    rewrite <- addVertex_spec3; split; auto.
+  Qed.
     
+  Lemma addEdges_spec1 :
+    forall e E G, Vertices.In e E -> IsVertex e (addVertices E G).
+  Proof.
+  Admitted.
+
+  Lemma addEdges_spec2 :
+    forall v E G, IsVertex v (addEdges E G) <-> IsVertex v G.
+  Proof.
+  Admitted.
+
   (* Rebuilds the graph according to the graph const *)
   Definition rebuildGraph_GraphConst1 G : t :=
     addEdges (enumEdges G) (addVertices (enumVertices G) empty).
@@ -235,7 +276,9 @@ Module Type DirectedGraphMorph.
   Proof.
     intros G. constructor.
     {
-      constructor; intros H.
+      constructor; intros H. 
+      unfold rebuildGraph_GraphConst1 in H.
+      rewrite <- IsVertexEnum. rewrite <- IsVertexEnum in H.
   Admitted.
 
   Lemma rebuildGraph_GraphConst1_spec2 :
@@ -245,7 +288,6 @@ Module Type DirectedGraphMorph.
         
   Admitted.
 
-  Print Respectful.
   Lemma ind1 (P : t -> Prop) (H0 : Respectful _ P) :
     P empty -> 
     (forall x g, P g -> P (addVertex x g)) ->
