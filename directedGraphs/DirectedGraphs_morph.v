@@ -5,8 +5,10 @@ Require Import Setoid Bool MSetProperties.
 
 Open Scope bool.
 
-Module Type DirectedGraphMorph.
-  Declare Module Import DG : DirectedGraphs.
+
+Module DirectedGraphMorph (DG : DirectedGraphs).
+  (* Declare Module Import DG : DirectedGraphs. *)
+  Import DG.
 
     Inductive EqualGraph : t -> t -> Prop :=
     | GraphEQ : forall g1 g2,
@@ -179,7 +181,7 @@ Module Type DirectedGraphMorph.
   Module Import EdgeProperties := OrdProperties Edges.
 
   Section GraphInduction.
-  Inductive GraphConst1 : t -> Prop :=
+  Inductive GraphConst1 : t -> Type :=
   | EmptyGraph1 : GraphConst1 empty
   | AddVert1 : forall G v, (GraphConst1 G) -> GraphConst1 (addVertex v G)
   | AddEdge1 : forall G e, (GraphConst1 G) -> GraphConst1 (addEdge e G).
@@ -237,7 +239,7 @@ Module Type DirectedGraphMorph.
   Lemma addVertices_spec1 :
     forall v V G, Vertices.In v V -> IsVertex v (addVertices V G).
   Proof.
-    intros v V G. unfold addVertices. 
+    intros v V G. unfold addVertices.
     apply VertProperties.P.fold_rec_weak.
     intros s s' H0 H1 H2 H3. rewrite H1 in H2. apply H2; auto.
     intros H. apply Vertices.empty_spec in H; contradiction.
@@ -279,28 +281,42 @@ Module Type DirectedGraphMorph.
       constructor; intros H. 
       unfold rebuildGraph_GraphConst1 in H.
       rewrite <- IsVertexEnum. rewrite <- IsVertexEnum in H.
-  Admitted.
+      Admitted.
 
   Lemma rebuildGraph_GraphConst1_spec2 :
     forall G, GraphConst1 (rebuildGraph_GraphConst1 G).
   Proof.
     intros G. unfold rebuildGraph_GraphConst1, addEdges, addVertices.
-        
-  Admitted.
+    apply EdgeProperties.P.fold_rec_weak;
+      try apply VertProperties.P.fold_rec_weak; try constructor; auto.
+  Qed.
+
 
   Lemma ind1 (P : t -> Prop) (H0 : Respectful _ P) :
     P empty -> 
     (forall x g, P g -> P (addVertex x g)) ->
     (forall x g, P g -> P (addEdge x g)) ->
     forall g, P g.
-  Admitted.
-  
+    intros.
+    unfold Respectful in H0.
+    rewrite <- (H0 (rebuildGraph_GraphConst1 g) g).
+    induction (rebuildGraph_GraphConst1_spec2 g);
+    auto.
+    apply rebuildGraph_GraphConst1_spec1.
+  Qed.
+
   Lemma rec1 (P : t -> Set) ( H0 : Respectful _ P) :
     P empty -> 
     (forall x g, P g -> P (addVertex x g)) ->
     (forall x g, P g -> P (addEdge x g)) ->
       forall g, P g.
-  Admitted.
+    intros.
+    unfold Respectful in H0.
+    rewrite <- (H0 (rebuildGraph_GraphConst1 g) g).
+    induction (rebuildGraph_GraphConst1_spec2 g);
+    auto.
+    apply rebuildGraph_GraphConst1_spec1.
+  Qed.
 
   Lemma rect1 :
     forall (P : t -> Type) (H0 : Respectful _ P),
@@ -308,5 +324,50 @@ Module Type DirectedGraphMorph.
       (forall x g, P g -> P (addVertex x g)) ->
       (forall x g, P g -> P (addEdge x g)) ->
         forall g, P g.
-  Admitted.
-  End GraphInduction.
+  Proof.
+    intros.
+    unfold Respectful in H0.
+    rewrite <- (H0 (rebuildGraph_GraphConst1 g) g).
+    induction (rebuildGraph_GraphConst1_spec2 g);
+    auto.
+    apply rebuildGraph_GraphConst1_spec1.
+  Qed.
+
+  Definition neighborhood : vertex -> t -> Vertices.t.
+    intros.
+    apply rect1.
+    constructor.
+    apply Vertices.empty.
+    intros.
+    apply X1.
+    intros.
+    apply destructEdge in x.
+    destruct x.
+    apply (if Vertices.E.eq_dec e X then (Vertices.add e0 X1)                             else  X1). 
+    exact X0.
+    Defined.
+    
+  Inductive GraphConst2 : t -> Type :=
+  | Empty : GraphConst2 empty
+  | GrowGraph : forall G,
+      GraphConst2 G ->
+      forall v1 E e,
+        ~ IsVertex v1 G ->
+        Edges.In e E -> 
+                     
+        (fst (destructEdge e)) =v= v1
+        \/ (snd (destructEdge e)) =v= v1 ->
+
+        (IsVertex (fst (destructEdge e)) G) \/
+        IsVertex (snd (destructEdge e)) G -> 
+
+        GraphConst2 (addEdges E (addVertex v1 G)).
+
+
+
+
+End GraphInduction.
+
+End DirectedGraphMorph.
+
+

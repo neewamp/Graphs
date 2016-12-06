@@ -1,16 +1,16 @@
 Require Import DirectedGraphs Ascii ExtrOcamlString.
-Require Import MSets MSetFacts PArith.
+Require Import MSets MSetFacts PArith DirectedGraphs_morph.
 
 Module myGraph <: DirectedGraphs.
   
-  Require Import MSetAVL.
+  Require Import MSetRBT.
   Require Import ZArith.
   Module pos :=  PositiveOrderedTypeBits.
   
-  Module Vertices := MSetAVL.Make pos.
+  Module Vertices := MSetRBT.Make pos.
   Definition node := pos.t.
   Module Edge := PairOrderedType pos pos.
-  Module Edges := MSetAVL.Make Edge.
+  Module Edges := MSetRBT.Make Edge.
 
 
   Module vert_facts := WFacts (Vertices).
@@ -594,34 +594,91 @@ Module myGraph <: DirectedGraphs.
                   if Pos.eqb (fst edge) v then Vertices.add (snd edge) e
                   else e) (enumEdges G) Vertices.empty.
   Definition test := map ascii_of_pos (Vertices.elements (neighborhood 1 graph2)).
+  Require Import List.
+  
+
+  Definition graph_contains (x : vertex) (g : t) : bool :=
+    Vertices.mem x (graphVertices g).
+
+  Definition graph_Contains (x : vertex)  (g: t) : Prop :=
+    Vertices.In x (graphVertices g).
+  
+
+  Lemma graph_containsP : forall x g,
+      reflect (graph_Contains x g) (graph_contains x g).
+  Proof.
+    intros.
+    apply iff_reflect.
+    unfold graph_Contains, graph_contains.
+    split; intros H; apply Vertices.mem_spec; auto.
+  Qed.
+
+  Definition isNeighbor (x y : vertex) (g : t) : Prop :=
+    Edges.In (x,y) (graphEdges g).
+  
+  Inductive path (g : t) : node -> node -> list node -> Prop :=
+  | start : forall x, graph_Contains x g -> path g x x (x::nil)
+  | step  : forall x y z l,
+      graph_Contains x g ->
+      path g y z (y::l) ->
+      isNeighbor x y g ->
+      path g x z (x::y::l).
+
+  
+  Inductive distance : Type :=
+  | INF : distance 
+  | num : nat -> distance.
 
 End myGraph.
+
+
+
+Module gp :=  DirectedGraphMorph myGraph.
+Print gp.
+
+
+
+
+
+Module g_prop := DirectedGraphMorph myGraph.
+
 
 (* Extract Constant myGraph.test =>  *)
 
 
 Extract Inductive bool => "bool" [ "true" "false" ].
- Extraction "myGraph.ml"  myGraph.
-(*let rec mmap f l =
-  (match l with
-  | Nil -> Nil
-  | Cons (h, t) -> Cons (f h, (mmap f t)))
-  
-let rec int_of_pos p =
+
+
+
+Extract Inductive bool  => "bool" [ "true" "false" ].
+Extract Inductive list => "list" [ "[]" "(::)" ].
+Extract Inductive positive => int [ "XI" "XO" "XH" ]
+   "let rec int_of_pos p =
   (match p with
    |XH -> 1
    |XO p' -> 2 * (int_of_pos p')
-   |XI p' -> 2* (int_of_pos p') + 1)
+   |XI p' -> 2* (int_of_pos p') + 1)".
+(* Extraction "myGraph.ml"  myGraph. *)
 
 
-let rec printer l =
-  (match l with
-  | Nil -> Printf.printf " "
-  | Cons (h, t) -> Printf.printf "%d " h; printer t)
+(* let rec mmap f l = *)
+(*   (match l with *)
+(*   | [] -> [] *)
+(*   |  (h:: t) ->  (f h:: (mmap f t))) *)
   
-  let () = 
-    printer (mmap int_of_pos (Coq_myGraph.Vertices.elements (Coq_myGraph.neighborhood XH Coq_myGraph.graph2)));;
-*)
+(* let rec int_of_pos p = *)
+(*   (match p with *)
+(*    |XH -> 1 *)
+(*    |XO p' -> 2 * (int_of_pos p') *)
+(*    |XI p' -> 2* (int_of_pos p') + 1) *)
+
+(* let rec printer l = *)
+(*   (match l with *)
+(*   | [] -> Printf.printf " " *)
+(*   |  (h:: t) -> Printf.printf "%d " h; printer t) *)
+  
+(*   let () =  *)
+(*     printer (mmap int_of_pos (test1));; *)
 
   
 

@@ -67,7 +67,7 @@ Module Type DirectedGraphs.
   Parameter Empty_vertices :
     forall G, IsEmpty G -> (Vertices.Empty (enumVertices G)).
   Parameter Empty_edges :
-    forall G, IsEmpty G -> (Vertices.Empty (enumVertices G)).
+    forall G, IsEmpty G -> (Edges.Empty (enumEdges G)).
   Parameter IsVertexEnum :
     forall G v, IsVertex v G <-> Vertices.In v (enumVertices G).
   Parameter IsEdgeEnum :
