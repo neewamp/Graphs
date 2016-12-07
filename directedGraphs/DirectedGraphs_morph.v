@@ -365,6 +365,52 @@ Module DirectedGraphMorph (DG : DirectedGraphs).
 
 
 
+  Definition rebuildGraph_GraphConst2 : t -> t. 
+    auto.
+  Defined.
+
+
+    Lemma rebuildGraph_GraphConst2_spec1 :
+    forall G, (rebuildGraph_GraphConst2 G) =G= G.
+  Proof.
+    intros G. constructor.
+    {
+      constructor; intros H. 
+      unfold rebuildGraph_GraphConst2 in H.
+      rewrite <- IsVertexEnum. rewrite <- IsVertexEnum in H.
+      Admitted.
+  Hint Constructors GraphConst2.
+
+
+  Lemma rebuildGraph_GraphConst2_spec2 :
+    forall G, GraphConst2 (rebuildGraph_GraphConst2 G).
+  Proof.
+    intros G. unfold rebuildGraph_GraphConst2, addVertices.
+    Admitted.
+    
+
+  Lemma ind2 (P : t -> Prop) (H0 : Respectful _ P) :
+    P empty -> forall G,
+      P G ->
+     (forall v1 E e G,
+        ~ IsVertex v1 G ->
+        Edges.In e E -> 
+                     
+        (fst (destructEdge e)) =v= v1
+        \/ (snd (destructEdge e)) =v= v1 ->
+
+        (IsVertex (fst (destructEdge e)) G) \/
+        IsVertex (snd (destructEdge e)) G -> 
+
+        P (addEdges E (addVertex v1 G))) ->
+    forall g, P g.
+    intros;
+    rewrite <- (H0 (rebuildGraph_GraphConst2 g) g).
+    induction (rebuildGraph_GraphConst2_spec2 g);
+      try  apply H2 with (e := e); auto.
+        apply rebuildGraph_GraphConst2_spec1; auto.
+  Qed.
+
 
 End GraphInduction.
 

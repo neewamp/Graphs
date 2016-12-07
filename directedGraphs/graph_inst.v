@@ -583,7 +583,6 @@ Module myGraph <: DirectedGraphs.
   Qed.
 
   Definition g := addEdge (1,3) (addVertex 3 (addVertex 1 empty)).
-  Compute enumEdges g.
   
   Definition graph1 :=  (addEdge (1,2) (addEdge (1,3) (addVertex 1 (addVertex 2 (addVertex 3 (addVertex 4 (addVertex 5 empty))))))).
   
@@ -593,9 +592,17 @@ Module myGraph <: DirectedGraphs.
     Edges.fold (fun edge e =>
                   if Pos.eqb (fst edge) v then Vertices.add (snd edge) e
                   else e) (enumEdges G) Vertices.empty.
+
   Definition test := map ascii_of_pos (Vertices.elements (neighborhood 1 graph2)).
   Require Import List.
   
+  Lemma neighborhood_prop :
+    forall x y g,
+      Vertices.In y (neighborhood x g) <->
+                      Edges.In (x,y) (graphEdges g).
+  Proof.
+    Admitted.
+
 
   Definition graph_contains (x : vertex) (g : t) : bool :=
     Vertices.mem x (graphVertices g).
@@ -615,7 +622,7 @@ Module myGraph <: DirectedGraphs.
 
   Definition isNeighbor (x y : vertex) (g : t) : Prop :=
     Edges.In (x,y) (graphEdges g).
-  
+
   Inductive path (g : t) : node -> node -> list node -> Prop :=
   | start : forall x, graph_Contains x g -> path g x x (x::nil)
   | step  : forall x y z l,
@@ -625,60 +632,26 @@ Module myGraph <: DirectedGraphs.
       path g x z (x::y::l).
 
   
-  Inductive distance : Type :=
-  | INF : distance 
-  | num : nat -> distance.
-
 End myGraph.
 
+Module g_prop :=  DirectedGraphMorph myGraph.
+Open Scope positive_scope.
 
 
-Module gp :=  DirectedGraphMorph myGraph.
-Print gp.
+  Compute (g_prop.rebuildGraph_GraphConst2 (myGraph.addEdge  (1,2) (myGraph.addVertex 2 (myGraph.addVertex 1 (myGraph.empty))))).
 
-
-
-
-
-Module g_prop := DirectedGraphMorph myGraph.
-
-
-(* Extract Constant myGraph.test =>  *)
 
 
 Extract Inductive bool => "bool" [ "true" "false" ].
 
-
-
-Extract Inductive bool  => "bool" [ "true" "false" ].
 Extract Inductive list => "list" [ "[]" "(::)" ].
-Extract Inductive positive => int [ "XI" "XO" "XH" ]
-   "let rec int_of_pos p =
-  (match p with
-   |XH -> 1
-   |XO p' -> 2 * (int_of_pos p')
-   |XI p' -> 2* (int_of_pos p') + 1)".
-(* Extraction "myGraph.ml"  myGraph. *)
-
-
-(* let rec mmap f l = *)
-(*   (match l with *)
-(*   | [] -> [] *)
-(*   |  (h:: t) ->  (f h:: (mmap f t))) *)
-  
-(* let rec int_of_pos p = *)
+(* Extract Inductive positive => int [ "XI" "XO" "XH" ] *)
+(*    "let rec int_of_pos p = *)
 (*   (match p with *)
 (*    |XH -> 1 *)
 (*    |XO p' -> 2 * (int_of_pos p') *)
-(*    |XI p' -> 2* (int_of_pos p') + 1) *)
-
-(* let rec printer l = *)
-(*   (match l with *)
-(*   | [] -> Printf.printf " " *)
-(*   |  (h:: t) -> Printf.printf "%d " h; printer t) *)
-  
-(*   let () =  *)
-(*     printer (mmap int_of_pos (test1));; *)
+(*    |XI p' -> 2* (int_of_pos p') + 1)". *)
+(* Extraction "myGraph.ml"  myGraph. *)
 
   
 
