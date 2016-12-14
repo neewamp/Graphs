@@ -44,8 +44,12 @@ Module Type DirectedGraphs.
     (* the empty graph *)
   Parameter empty : t.  
   Parameter buildEdge : vertex -> vertex -> edge.
-  Parameter destructEdge : edge -> (vertex*vertex)%type.
-  
+  Parameter destructEdge : edge -> vertex * vertex %type.
+  (*
+  Parameter src : edge -> vertex.
+  Parameter snk : edge -> vertex.
+  *)
+
   (** Membership Predicates and functions **)
   Parameter IsEmpty : t -> Prop.
   Parameter IsVertex : vertex -> t -> Prop.
@@ -59,6 +63,7 @@ Module Type DirectedGraphs.
   Parameter IsVertex_reflect : forall G v, reflect (IsVertex v G) (isVertex v G).
   Parameter IsEdge_reflect : forall G e, reflect (IsEdge e G) (isEdge e G).
 
+  (* t here is the tyoe of graphs, X.t is the base type delcared in X*)
   Parameter enumVertices : t -> Vertices.t.
   Parameter enumEdges : t -> Edges.t.
 
@@ -92,14 +97,15 @@ Module Type DirectedGraphs.
   Parameter addVertex_spec3 :
     forall G v e,
       IsEdge e G <-> IsEdge e (addVertex v G).
+
   Parameter addEdge_spec1 :
     forall G e,
       IsVertex (fst (destructEdge e)) G->
       IsVertex (snd (destructEdge e)) G->
-        IsEdge e (addEdge e G).
+         IsEdge e (addEdge e G).
   Parameter addEdge_spec2 :
      forall G e1 e2, e1 <e> e2 ->
-      IsEdge e1 G <-> IsEdge e1 (addEdge e2 G).
+       IsEdge e1 G <-> IsEdge e1 (addEdge e2 G).
   Parameter addEdge_spec3 : forall G v e,
     IsVertex v G <-> IsVertex v  (addEdge e G).
 

@@ -637,7 +637,7 @@ End myGraph.
 Module g_prop :=  DirectedGraphMorph myGraph.
 Open Scope positive_scope.
 
-
+(*
   Compute (g_prop.rebuildGraph_GraphConst2 (myGraph.addEdge  (1,2) (myGraph.addVertex 2 (myGraph.addVertex 1 (myGraph.empty))))).
 
 
@@ -653,5 +653,5 @@ Extract Inductive list => "list" [ "[]" "(::)" ].
 (*    |XI p' -> 2* (int_of_pos p') + 1)". *)
 (* Extraction "myGraph.ml"  myGraph. *)
 
-  
+*)  
 

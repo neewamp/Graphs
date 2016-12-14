@@ -175,13 +175,39 @@ Module DirectedGraphMorph (DG : DirectedGraphs).
           rewrite <- H0; auto.
         }
       }
-  Qed.
+    Qed.
+
+    (* Consider deleting *)
+    Add Morphism (fun e g => IsEdge e g /\
+                             IsVertex (fst (destructEdge e)) g)
+      with signature Edges.E.eq ==> EqualGraph ==> iff
+    as EdgeDest1.
+    Proof.
+      intros e1 e2 H0 G1 G2 H1.
+      split; intros [H2 H3]; split.
+      + rewrite <- H0, <- H1. auto.
+      + rewrite H0, H1 in H2. apply Edge_exists1 in H2; auto.
+      + rewrite <- H0, <- H1 in H2. auto.
+      + rewrite <- H0, <- H1 in H2. apply Edge_exists1 in H2; auto.
+    Qed.
+
+    Add Morphism (fun e g => IsEdge e g /\
+                             IsVertex (snd (destructEdge e)) g)
+      with signature Edges.E.eq ==> EqualGraph ==> iff
+    as EdgeDest2.
+    Proof.
+      intros e1 e2 H0 G1 G2 H1.
+      split; intros [H2 H3]; split.
+      + rewrite <- H0, <- H1. auto.
+      + rewrite H0, H1 in H2. apply Edge_exists2 in H2; auto.
+      + rewrite <- H0, <- H1 in H2. auto.
+      + rewrite <- H0, <- H1 in H2. apply Edge_exists2 in H2; auto.
+    Qed.
 
   Module Import VertProperties := OrdProperties Vertices.
   Module Import EdgeProperties := OrdProperties Edges.
 
-  Section GraphInduction.
-  Inductive GraphConst1 : t -> Type :=
+Inductive GraphConst1 : t -> Type :=
   | EmptyGraph1 : GraphConst1 empty
   | AddVert1 : forall G v, (GraphConst1 G) -> GraphConst1 (addVertex v G)
   | AddEdge1 : forall G e, (GraphConst1 G) -> GraphConst1 (addEdge e G).
@@ -226,6 +252,63 @@ Module DirectedGraphMorph (DG : DirectedGraphs).
     apply addEdge_spec2; auto.
   Qed.
 
+  Lemma transposeAddVertex :
+    transpose EqualGraph (fun (v0 : Vertices.elt) (G0 : t) => addVertex v0 G0).
+  Proof.
+    intros v1 v2 G. constructor.
+    + intros v. do 2 rewrite <- IsVertexEnum.
+      split; intros.
+      case (Vertices.E.eq_dec v v2); intros.
+        rewrite e. apply addVertex_spec1.
+        apply addVertex_spec2; auto.
+          case (Vertices.E.eq_dec v v1); intros.
+          rewrite e. apply addVertex_spec1.
+          apply addVertex_spec2; auto.
+          do 2 apply addVertex_spec2 in H; auto.
+      case (Vertices.E.eq_dec v v1); intros.
+        rewrite e. apply addVertex_spec1.
+        apply addVertex_spec2; auto.
+          case (Vertices.E.eq_dec v v2); intros.
+          rewrite e. apply addVertex_spec1.
+          apply addVertex_spec2; auto.
+          do 2 apply addVertex_spec2 in H; auto.
+    + intros e. do 2 rewrite <- IsEdgeEnum. split; intros;
+      do 2 apply addVertex_spec3 in H; do 2 apply addVertex_spec3; auto.
+  Qed.
+
+  Lemma transposeAddEdge :
+    transpose EqualGraph (fun (e0 : Edges.elt) (G0 : t) => addEdge e0 G0).
+  Proof.
+    split. unfold Vertices.eq.
+    + split; intros; try rewrite <- IsVertexEnum in *;
+      try do 2 rewrite <- addEdge_spec3 in *; auto.
+    + split; intros; rewrite <- IsEdgeEnum in *.
+      case (Edges.E.eq_dec a y); intros.
+      rewrite e in H |-*.
+      - assert (IsVertex (fst (destructEdge y)) z) as H0.
+          apply Edge_exists1 in H; do 2 rewrite <- addEdge_spec3 in H; auto.
+        assert (IsVertex (snd (destructEdge y)) z) as H1.
+          apply Edge_exists2 in H; do 2 rewrite <- addEdge_spec3 in H; auto.
+        apply addEdge_spec1; apply addEdge_spec3; auto.
+      - apply addEdge_spec2; auto. case (Edges.E.eq_dec a x); intros.
+        rewrite e in H |-*.  apply addEdge_spec1;
+        [apply Edge_exists1 in H | apply Edge_exists2 in H];
+        do 2 apply addEdge_spec3 in H; auto. do 2 apply addEdge_spec2 in H; auto.
+        apply addEdge_spec2; auto.
+      - case (Edges.E.eq_dec a x); intros.
+        rewrite e in H |-*.
+        * assert (IsVertex (fst (destructEdge x)) z) as H0.
+            apply Edge_exists1 in H; do 2 rewrite <- addEdge_spec3 in H; auto.
+          assert (IsVertex (snd (destructEdge x)) z) as H1.
+            apply Edge_exists2 in H; do 2 rewrite <- addEdge_spec3 in H; auto.
+          apply addEdge_spec1; auto; apply addEdge_spec3; auto.
+        * apply addEdge_spec2; auto. case (Edges.E.eq_dec a y); intros.
+        rewrite e in H |-*.  apply addEdge_spec1;
+        [apply Edge_exists1 in H | apply Edge_exists2 in H];
+        do 2 apply addEdge_spec3 in H; auto. do 2 apply addEdge_spec2 in H; auto.
+        apply addEdge_spec2; auto.
+  Qed.
+
   Lemma addEdges_pres :
     forall e E G, IsEdge e G ->
       IsEdge e (addEdges E G).
@@ -233,6 +316,63 @@ Module DirectedGraphMorph (DG : DirectedGraphs).
     intros. unfold addEdges. apply EdgeProperties.P.fold_rec_weak;
     try solve [auto | split; auto].
     intros e1 g V H0 H1. apply addEdge_pres; auto.
+  Qed.
+
+  Lemma addEdges_spec2 :
+    forall v E G, IsVertex v (addEdges E G) <-> IsVertex v G.
+  Proof.
+    intros v E G. unfold addEdges. apply P.fold_rec_weak.
+    auto. split; auto.
+    intros. rewrite <- H0. symmetry. apply addEdge_spec3.
+  Qed.
+(*
+  Lemma addEdges_morph_aux1 :
+    forall E1 E2 G, E1 =E= E2 -> addEdges E1 G =G= addEdges E2 G.
+  Proof.
+    intros. split.
+    + intros v; split; intros H0; rewrite <- IsVertexEnum in *;
+      apply addEdges_spec2 in H0; apply addEdges_spec2; auto.
+    + intros e; split; intros H0; rewrite <- IsEdgeEnum in *;
+      unfold addEdges in *. admit. admit.
+  Admitted.
+*)
+  Lemma addEdges_morph_aux2 :
+    forall E G1 G2, G1 =G= G2 -> addEdges E G1 =G= addEdges E G2.
+  Proof.
+    intros. split.
+    + intros v; split; intros H0; rewrite <- IsVertexEnum in *;
+      apply addEdges_spec2 in H0; apply addEdges_spec2;
+      [rewrite <- H | rewrite H]; auto.
+    + unfold addEdges. intros v. do 2 rewrite <- IsEdgeEnum. 
+      induction E using P.set_induction.
+      - split; intros; rewrite P.fold_1b in *; auto;
+        [rewrite <- H | rewrite H]; auto.
+      - intros. rewrite (@P.fold_2 E1 E2 x); auto. rewrite (@P.fold_2 E1 E2 x); auto.
+        case (Edges.E.eq_dec v x); intros.
+        * rewrite e. split; intros; apply addEdge_spec1; apply addEdges_spec2;
+          [apply Edge_exists1 in H2 | apply Edge_exists2 in H2 |
+           apply Edge_exists1 in H2 | apply Edge_exists2 in H2];
+          apply addEdge_spec3 in H2; apply addEdges_spec2 in H2;
+          [rewrite <- H | rewrite <- H | rewrite H | rewrite H]; auto.
+        * split; intros H2; apply addEdge_spec2; auto;
+          apply addEdge_spec2 in H2; auto; apply IHE1; auto.
+        * apply EqualGraph_equiv.
+        * intros e1 e2 H2 Ga Gb H3. rewrite H3, H2. apply EqualGraph_equiv.
+        * apply transposeAddEdge.
+        * apply EqualGraph_equiv.
+        * intros e1 e2 H2 Ga Gb H3. rewrite H3, H2. apply EqualGraph_equiv.
+        * apply transposeAddEdge.
+  Qed.
+
+  Add Morphism addEdges
+      with signature Edges.eq ==> EqualGraph ==> EqualGraph
+  as addEdges_morph.
+  Proof.
+    intros. assert (addEdges y x0 =G= addEdges x x0) as H1.
+    unfold addEdges. apply P.fold_equal. apply EqualGraph_equiv.
+    intros e1 e2 H1 g1 g2 H2. rewrite H2, H1. apply EqualGraph_equiv.
+    apply transposeAddEdge. symmetry. apply H. rewrite <- H1.
+    apply addEdges_morph_aux2. auto.
   Qed.
 
  (* Is there a term for possessing the added elements? *)
@@ -258,28 +398,90 @@ Module DirectedGraphMorph (DG : DirectedGraphs).
     intros s s' G1 H0 H1; auto. rewrite <- H1.
     rewrite <- addVertex_spec3; split; auto.
   Qed.
-    
-  Lemma addEdges_spec1 :
-    forall e E G, Vertices.In e E -> IsVertex e (addVertices E G).
-  Proof.
-  Admitted.
 
-  Lemma addEdges_spec2 :
-    forall v E G, IsVertex v (addEdges E G) <-> IsVertex v G.
+ 
+  Lemma addEdges_spec1 :
+    forall E e G, (IsVertex (fst (destructEdge e)) G) ->
+                (IsVertex (snd (destructEdge e)) G) ->
+                Edges.In e E -> IsEdge e (addEdges E G).
   Proof.
-  Admitted.
+    intros E. induction E using P.set_induction_bis.
+    + intros. rewrite <- H in H2. specialize (IHE1 e G H0 H1 H2).
+      assert (addEdges E1 G =G= addEdges E2 G) as H3. rewrite H.
+      reflexivity. rewrite <- H. auto.
+    + intros. apply Edges.empty_spec in H1. contradiction.
+    + intros. unfold addEdges. rewrite P.fold_add.
+      apply Edges.add_spec in H2. case H2; intros.
+      - rewrite <- H3. apply addEdge_spec1; apply addEdges_spec2; auto.
+      - apply (IHE _ _ H0 H1) in H3. apply addEdge_pres. auto.
+      - apply EqualGraph_equiv.
+      - unfold respectful. unfold Proper. intros. rewrite H3, H4.
+        apply EqualGraph_equiv.
+      - apply transposeAddEdge.
+      - auto.
+  Qed.
 
   (* Rebuilds the graph according to the graph const *)
   Definition rebuildGraph_GraphConst1 G : t :=
     addEdges (enumEdges G) (addVertices (enumVertices G) empty).
 
+  Lemma addVertices_bleh :
+    forall v V, Vertices.In v V -> Vertices.In v (enumVertices (addVertices V empty)).
+  Proof.
+    intros. rewrite <- IsVertexEnum.
+    apply addVertices_spec1; auto.
+  Qed.
+
+  Lemma emptyVerts : forall G, IsEmpty G -> forall v, ~ IsVertex v G.
+  Proof.
+    
+  Admitted.
+
+  Lemma emptyEdges : forall G, IsEmpty G -> forall e, ~ IsEdge e G.
+  Proof.
+
+  Admitted.    
+
   Lemma rebuildGraph_GraphConst1_spec1 :
     forall G, (rebuildGraph_GraphConst1 G) =G= G.
   Proof.
     intros G. constructor.
-    {
-      constructor; intros H. 
-      unfold rebuildGraph_GraphConst1 in H.
+    + unfold rebuildGraph_GraphConst1. intros v.
+      do 2 rewrite <- IsVertexEnum. rewrite addEdges_spec2.
+      - do 2 rewrite IsVertexEnum.
+        induction (enumVertices G) using VertProperties.P.set_induction.
+        * unfold addVertices. rewrite VertProperties.P.fold_1b.
+          generalize (Empty); intros. apply emptyVerts with (v := v) in H0.
+          split; intros. rewrite <- IsVertexEnum in H1. contradiction.
+          apply H in H1. contradiction. auto.
+        * split; intros.
+            unfold addVertices in H1.
+            rewrite (@VertProperties.P.fold_2 t0_1 t0_2 x) in H1; auto.
+            case (Vertices.E.eq_dec v x); intros H3. rewrite H3. apply H0.
+            left. reflexivity. apply H0. right. apply IHt0_1.
+            rewrite <- IsVertexEnum in H1. apply addVertex_spec2 in H1; auto.
+            rewrite <- IsVertexEnum. apply H1. apply EqualGraph_equiv.
+            intros a b H' c d H''. rewrite H', H''. reflexivity.
+            apply transposeAddVertex. rewrite <- IsVertexEnum.
+            apply addVertices_spec1. auto.
+    + unfold rebuildGraph_GraphConst1.
+      intros e. do 2 rewrite <- IsEdgeEnum. split.
+      - intros. rewrite IsEdgeEnum.
+        remember (enumEdges G).
+        induction (t0) using EdgeProperties.P.set_induction.
+        * unfold addEdges in H. rewrite EdgeProperties.P.fold_1b in H.
+          rewrite addVertices_spec2 in H. generalize Empty; intros H1.
+          apply emptyEdges with (e := e) in H1. contradiction. auto.
+        * apply P.Add_Equal in H1. rewrite H1. unfold addEdges in H.
+          admit. (* still needs some work *)
+          (* rewrite (@EdgeProperties.P.fold_2 t1_1 t1_2 e) in H; auto.
+          admit. apply EqualGraph_equiv.
+          intros e1 e2 H' g1 g2 H''. rewrite H', H''. reflexivity.
+          apply transposeAddEdge. *)
+      - intros H. apply addEdges_spec1;
+        try (apply addVertices_spec1; rewrite <- IsVertexEnum).
+        apply Edge_exists1; auto. apply Edge_exists2; auto. 
+        rewrite <- IsEdgeEnum; auto.
   Admitted.
 
   Lemma rebuildGraph_GraphConst1_spec2 :
@@ -290,22 +492,17 @@ Module DirectedGraphMorph (DG : DirectedGraphs).
       try apply VertProperties.P.fold_rec_weak; try constructor; auto.
   Qed.
 
-
-
-
-
-
-  Lemma ind1 (P : t -> Prop) (H0 : Respectful _ P) :
+  Lemma ind1 (P : t -> Prop) (H0 : Respectful Prop P) :
     P empty -> 
     (forall x g, P g -> P (addVertex x g)) ->
     (forall x g, P g -> P (addEdge x g)) ->
-    forall g, P g.
+      forall g, P g.
+  Proof.
     intros.
     unfold Respectful in H0.
     rewrite <- (H0 (rebuildGraph_GraphConst1 g) g).
     induction (rebuildGraph_GraphConst1_spec2 g);
-    auto.
-    apply rebuildGraph_GraphConst1_spec1.
+    auto. apply rebuildGraph_GraphConst1_spec1.
   Qed.
 
   Lemma rec1 (P : t -> Set) ( H0 : Respectful _ P) :
@@ -313,6 +510,7 @@ Module DirectedGraphMorph (DG : DirectedGraphs).
     (forall x g, P g -> P (addVertex x g)) ->
     (forall x g, P g -> P (addEdge x g)) ->
       forall g, P g.
+  Proof.
     intros.
     unfold Respectful in H0.
     rewrite <- (H0 (rebuildGraph_GraphConst1 g) g).
@@ -337,49 +535,49 @@ Module DirectedGraphMorph (DG : DirectedGraphs).
   Qed.
 
   Definition neighborhood : vertex -> t -> Vertices.t.
-    intros.
-    apply rect1.
-    constructor.
-    apply Vertices.empty.
-    intros.
-    apply X1.
-    intros.
-    apply destructEdge in x.
-    destruct x.
-    apply (if Vertices.E.eq_dec e X then (Vertices.add e0 X1)                             else  X1). 
-    exact X0.
-    Defined.
+  Proof.
+    intros. apply rect1.
+    constructor. apply Vertices.empty.
+    intros. apply X1.
+    intros. apply destructEdge in x. destruct x.
+    apply (if Vertices.E.eq_dec e X
+                then (Vertices.add e0 X1)
+                else  X1). exact X0.
+  Defined.
     
   Inductive GraphConst2 : t -> Type :=
   | Empty : GraphConst2 empty
   | GrowGraph : forall G,
       GraphConst2 G ->
-      forall v1 E e,
+      forall v1 E,
+        (* We require v1 to be a new vertex *)
         ~ IsVertex v1 G ->
-        Edges.In e E -> 
-                     
-        (fst (destructEdge e)) =v= v1
-        \/ (snd (destructEdge e)) =v= v1 ->
+        (* All edges in E have v1 as one of their members *)
+        (forall e, Edges.In e E -> 
+          ((fst (destructEdge e)) =v= v1 \/
+          (snd (destructEdge e)) =v= v1)) ->
+        (* All edges in E have a vertex of the parent graph as a member *)
+        (forall e, Edges.In e E ->
+          (IsVertex (fst (destructEdge e)) G \/
+           IsVertex (snd (destructEdge e)) G)) ->
+       GraphConst2 (addEdges E (addVertex v1 G)).
 
-        (IsVertex (fst (destructEdge e)) G) \/
-        IsVertex (snd (destructEdge e)) G -> 
-
-        GraphConst2 (addEdges E (addVertex v1 G)).
-
-
-  Program Definition addEdges_GC2 (v1 : vertex) (G : t) (GN : t): Edges.t :=
-    Edges.fold (fun (e : edge) E
-     => if negb (Vertices.mem v1 (enumVertices GN)) &&
-                Vertices.mem (fst (destructEdge e)) (enumVertices G) ||
-           Vertices.mem (snd (destructEdge e)) (enumVertices G) && 
-                        (Vertices.equal
-       (Vertices.add (fst (destructEdge e)) Vertices.empty) (Vertices.add v1 Vertices.empty) || Vertices.equal (Vertices.add (snd (destructEdge e)) Vertices.empty) (Vertices.add v1 Vertices.empty))
-                        
-        then Edges.add e E else
-          E) (enumEdges G) Edges.empty.
-  
-
-
+Module Import vOTF := OrderedTypeFacts Vertices.E.
+  (* Generates the edges that need to be added to a graph GN, in order to
+      satisfy GraphConst2, with the end goal of reconstructing G, given a vertex v1 *)
+  Definition addEdges_GC2 (v1 : vertex) (G : t) (GN : t): Edges.t :=
+    Edges.fold
+      (fun (e : edge) E =>
+            (* Check to see which edges have a source/sink in the graph GN *)
+         if ((Vertices.mem (fst (destructEdge e)) (enumVertices GN) ||
+             Vertices.mem (snd (destructEdge e)) (enumVertices GN)))
+            &&
+            (* Ensures that either the source/sink is equal to v1 *)
+            (vOTF.eqb v1 (fst (destructEdge e)) ||
+            (vOTF.eqb v1 (snd (destructEdge e))))
+         then Edges.add e E
+         else E)
+      (enumEdges G) Edges.empty.
 
   Definition rebuildGraph_GraphConst2 (G : t) : t :=
     Vertices.fold (fun (v : vertex) (G0 : t) =>
@@ -404,88 +602,52 @@ Module DirectedGraphMorph (DG : DirectedGraphs).
   Proof.
     Admitted.
     
-
-  Lemma ind2 (P : t -> Prop) (H0 : Respectful _ P) :
-    P empty -> forall G,
-      P G ->
-     (forall v1 E e G,
+  Lemma ind2 (P : t -> Type) (H0 : Respectful _ P) :
+    P empty ->
+    (forall G, P G ->
+      (forall v1 E,
         ~ IsVertex v1 G ->
-        Edges.In e E -> 
-                     
-        (fst (destructEdge e)) =v= v1
-        \/ (snd (destructEdge e)) =v= v1 ->
-
-        (IsVertex (fst (destructEdge e)) G) \/
-        IsVertex (snd (destructEdge e)) G -> 
-
-        P (addEdges E (addVertex v1 G))) ->
+          (forall e, Edges.In e E -> 
+            ((fst (destructEdge e)) =v= v1 \/
+            (snd (destructEdge e)) =v= v1)) ->
+          (forall e, Edges.In e E ->
+            (IsVertex (fst (destructEdge e)) G \/
+             IsVertex (snd (destructEdge e)) G)) ->
+        P (addEdges E (addVertex v1 G)))) ->
      forall g, P g.
   Proof.
-    intros H G H1 H2 g.
+    intros H H1 g.
     rewrite <- (H0 (rebuildGraph_GraphConst2 g) g).
-    induction (rebuildGraph_GraphConst2_spec2 g);
-      try  apply H2 with (e := e); auto.
+    induction (rebuildGraph_GraphConst2_spec2 g); auto.
     apply rebuildGraph_GraphConst2_spec1.
   Qed.
 
-
-  Lemma rec2 (P : t -> Set) (H0 : Respectful _ P) :
-    P empty -> forall G,
-      P G ->
-      (forall v1 E e G,
-          ~ IsVertex v1 G ->
-          Edges.In e E -> 
-          
-          (fst (destructEdge e)) =v= v1
-          \/ (snd (destructEdge e)) =v= v1 ->
-
-          (IsVertex (fst (destructEdge e)) G) \/
-          IsVertex (snd (destructEdge e)) G -> 
-
-          P (addEdges E (addVertex v1 G))) ->
-      forall g, P g.
+  Lemma ind3 (P : t -> Type) (H0 : Respectful _ P) :
+    (forall G, Vertices.cardinal (enumVertices G) = 0 -> P G) ->
+    (forall G n, Vertices.cardinal (enumVertices G) = n ->
+      (P G) ->
+      (forall G', Vertices.cardinal (enumVertices G') = S n -> P G')) ->
+    forall G, P G.
   Proof.
-    intros H G H1 H2 g.
-    rewrite <- (H0 (rebuildGraph_GraphConst2 g) g).
-    induction (rebuildGraph_GraphConst2_spec2 g); 
-      auto;
-      try  apply H2 with (e := e); auto.
-    apply rebuildGraph_GraphConst2_spec1.
+    intros. apply ind2; auto.
+    apply X. auto.
+    admit.
+    intros.
+    specialize (X0 G0 (Vertices.cardinal (enumVertices G0))).
+    apply X0; auto. admit.
+  Admitted.
+
+  Lemma ind4 (P : t -> Type) (H0 : Respectful _ P) :
+    (forall G, Vertices.cardinal (enumVertices G) = 0 -> P G) ->
+    (forall G G',
+      (Vertices.cardinal (enumVertices G) <= Vertices.cardinal (enumVertices G')) ->
+      (P G) ->
+        (P G')) ->
+    forall G, P G.
+  Proof.
+    intros. apply ind3; auto.
+    intros. apply X0 with (G:= G0). rewrite H, H1; auto.
+    auto.
   Qed.
-
-
-    Lemma rect2 (P : t -> Set) (H0 : Respectful _ P) :
-    P empty -> forall G,
-      P G ->
-     (forall v1 E e G,
-        ~ IsVertex v1 G ->
-        Edges.In e E -> 
-                     
-        (fst (destructEdge e)) =v= v1
-        \/ (snd (destructEdge e)) =v= v1 ->
-
-        (IsVertex (fst (destructEdge e)) G) \/
-        IsVertex (snd (destructEdge e)) G -> 
-
-        P (addEdges E (addVertex v1 G))) ->
-    forall g, P g.
-    Proof.
-      intros H G H1 H2 g.
-      rewrite <- (H0 (rebuildGraph_GraphConst2 g) g).
-      induction (rebuildGraph_GraphConst2_spec2 g); 
-        auto;
-        try  apply H2 with (e := e); auto.
-      apply rebuildGraph_GraphConst2_spec1.
-    Qed.
-        
-
-
-
-
-
-
-End GraphInduction.
 
 End DirectedGraphMorph.
-
-
