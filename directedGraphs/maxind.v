@@ -8,8 +8,8 @@ Module Type MAX_IND_SETS (G : DirectedGraphs).
   (** List the maximal independent sets g. *)
   Parameter max_ind_sets : forall (g : G.t), list VertexSet.t.
 
-  (** Check whether s is a maximal independent set in g. *)
-  Parameter max_ind_set : forall (s : VertexSet.t) (g : G.t), bool.
+  (** Check whether s is an independent set in g. *)
+  Parameter ind_set : forall (s : VertexSet.t) (g : G.t), bool.
 
   (** [s] is an independent set in G *)
   Definition IndSet (s : VertexSet.t) (g : G.t) : Prop :=
@@ -18,7 +18,8 @@ Module Type MAX_IND_SETS (G : DirectedGraphs).
         VertexSet.E.eq x y \/
         ~G.IsEdge (G.buildEdge x y) g) s) s.
 
-  Definition MaxIndSet (s : VertexSet.t) (g : G.t) : Prop := 
+  Definition MaxIndSet (s : VertexSet.t) (g : G.t) : Prop :=
+    VertexSet.cardinal s > 0 /\ (*must be true for Lawler to terminate*)
     IndSet s g /\
     VertexSet.For_all (fun x =>
       VertexSet.In x s \/ 
@@ -27,6 +28,6 @@ Module Type MAX_IND_SETS (G : DirectedGraphs).
   Parameter max_ind_sets_ok :
     forall g, List.Forall (fun s => MaxIndSet s g) (max_ind_sets g).
 
-  Parameter max_ind_set_ok :
-    forall g s, reflect (MaxIndSet s g) (max_ind_set s g).
+  Parameter ind_set_ok :
+    forall g s, reflect (IndSet s g) (ind_set s g).
 End MAX_IND_SETS.  

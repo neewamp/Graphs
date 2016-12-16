@@ -115,13 +115,11 @@ Module Lawler (G : DirectedGraphs) (X : MAX_IND_SETS G).
     Definition min (l : list positive) := List.fold_left Pos.min l 1%positive.
     
     Definition get_chromatic_number (s : VertexSet.t) : LawlerComp :=
-      bind 
-        (@get _ _)
-        (fun d : D =>
-           match M.find s d with
-           | None => raise "Table lookup failed"
-           | Some p => ret p
-           end).
+      d <- @get _ _; 
+      match M.find s d with
+      | None => raise "Table lookup failed"
+      | Some p => ret p
+      end.
 
     Require Import Coq.Program.Wf.    
     Program Fixpoint Lawler
@@ -130,15 +128,17 @@ Module Lawler (G : DirectedGraphs) (X : MAX_IND_SETS G).
       : LawlerComp :=
       try get_chromatic_number s
       with
-        if X.max_ind_set s g then
+        if X.ind_set s g then
           let chi := 1%positive in 
           upd (M.add s chi);; ret chi
         else
           let gs := induced_subgraph g s in
           l <- mapM (fun s' => @Lawler (G.Vertices.diff s s') _) (X.max_ind_sets gs);
           let chi := (min l + 1)%positive in 
-          upd (M.add s chi);;
-          ret chi.
-    Next Obligation. Admitted. (*TODO: need "cardinal MIS > 0"*)
+          upd (M.add s chi);; ret chi.
+    Next Obligation.
+    Admitted. (*TODO: need "cardinal MIS > 0"*)
   End Lawler.
 End Lawler.
+
+
