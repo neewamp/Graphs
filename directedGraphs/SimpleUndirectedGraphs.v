@@ -37,7 +37,8 @@ Module Type SimpleUndirectedGraphs.
   Parameter IsVertex : vertex -> t -> Prop.
   Parameter IsEdge : edge -> t -> Prop.
 
-  Parameter edges_antisymmetric : forall (v : vertex) (G : t),
+  (* No self cycles *)
+  Parameter edges_irreflexive : forall (v : vertex) (G : t),
       ~ IsEdge (buildEdge v v) G.
 
   Parameter isEmpty : t -> bool.
