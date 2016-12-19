@@ -61,6 +61,18 @@ Fixpoint mapM (state A B ERR : Type) (f : A -> Comp state B ERR) (l : list A)
     bind (mapM f l') (fun l => ret (b :: l)))
   end.
 
+Fixpoint omapM (state A B ERR : Type) (f : A -> Comp state (option B) ERR) (l : list A)
+  : Comp state (list B) ERR :=
+  match l with
+  | nil => ret nil
+  | a :: l' =>
+    bind (f a) (fun ob =>
+                  match ob with
+                  | None => omapM f l'
+                  | Some b => bind (omapM f l') (fun l => ret (b :: l))
+                  end)
+  end.
+
 Module Lawler (G : DirectedGraphs) (X : MAX_IND_SETS G).
   Module GraphExtras := DirectedGraphMorph G.
   Import GraphExtras.
@@ -133,11 +145,28 @@ Module Lawler (G : DirectedGraphs) (X : MAX_IND_SETS G).
           upd (M.add s chi);; ret chi
         else
           let gs := induced_subgraph g s in
-          l <- mapM (fun s' => @Lawler (G.Vertices.diff s s') _) (X.max_ind_sets gs);
+          l <- omapM (fun s' =>
+            match G.Vertices.exists_ (fun x => G.Vertices.mem x s) s' with
+            | true => r <- @Lawler (G.Vertices.diff s s') _; ret (Some r)
+            | false => ret None
+            end)
+            (X.max_ind_sets gs);
           let chi := (min l + 1)%positive in 
           upd (M.add s chi);; ret chi.
     Next Obligation.
-    Admitted. (*TODO: need "cardinal MIS > 0"*)
+      symmetry in Heq_anonymous.
+      rewrite G.Vertices.exists_spec in Heq_anonymous.
+      Focus 2.
+      intros y z H. apply VertProperties.P.Dec.F.mem_m; auto.
+      apply VertProperties.P.equal_refl. 
+      destruct Heq_anonymous as [x [H1 H2]].
+      apply VertProperties.P.subset_cardinal_lt with x.
+      { apply VertProperties.P.subset_diff.
+        apply VertProperties.P.Dec.F.Subset_refl. }
+      { apply VertProperties.P.Dec.F.mem_2; auto. }
+      intros H3.
+      apply VertProperties.P.FM.diff_2 in H3; apply H3; auto.
+    Qed.      
   End Lawler.
 End Lawler.
 

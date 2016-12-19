@@ -19,7 +19,6 @@ Module Type MAX_IND_SETS (G : DirectedGraphs).
         ~G.IsEdge (G.buildEdge x y) g) s) s.
 
   Definition MaxIndSet (s : VertexSet.t) (g : G.t) : Prop :=
-    VertexSet.cardinal s > 0 /\ (*must be true for Lawler to terminate*)
     IndSet s g /\
     VertexSet.For_all (fun x =>
       VertexSet.In x s \/ 
