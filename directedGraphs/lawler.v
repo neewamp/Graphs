@@ -4,7 +4,7 @@ Require Import Coq.FSets.FMapAVL Coq.FSets.FMapFacts.
 Require Import Structures.Orders NArith.
 Require Import String.
 
-Require Import DirectedGraphs DirectedGraphs_morph maxind.
+Require Import DirectedGraphs DirectedGraphs_morph maxind SimpleUndirectedGraphs.
 
 Definition Comp (state A ERR : Type) := state -> (state * A) + ERR.
 
@@ -73,7 +73,7 @@ Fixpoint omapM (state A B ERR : Type) (f : A -> Comp state (option B) ERR) (l : 
                   end)
   end.
 
-Module Lawler (G : DirectedGraphs) (X : MAX_IND_SETS G).
+Module Lawler (G : SimpleUndirectedGraphs) (X : MAX_IND_SETS G).
   Module GraphExtras := DirectedGraphMorph G.
   Import GraphExtras.
 

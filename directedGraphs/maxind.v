@@ -1,8 +1,10 @@
 Require Import Structures.Orders NArith MSetInterface.
 
 Require Import DirectedGraphs DirectedGraphs_morph.
+Require Import SimpleUndirectedGraphs.
 
-Module Type MAX_IND_SETS (G : DirectedGraphs).
+
+Module Type MAX_IND_SETS (G : SimpleUndirectedGraphs).
   Module VertexSet <: MSetInterface.Sets := G.Vertices.
   
   (** List the maximal independent sets g. *)
