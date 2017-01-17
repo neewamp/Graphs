@@ -131,6 +131,17 @@ Module independentSets (DG : SimpleUndirectedGraphs).
     rewrite H1; auto.
   Qed.
   
+  Lemma hello : forall (x : nat), 2 * x = x + x.
+  Proof.
+    intros.
+    destruct x.
+    auto.
+    simpl.
+    rewrite <- plus_n_O.
+    auto.
+  Qed.
+  
+
 
   Theorem validSetRecr : 
     forall x (X : Vertices.t) G,
@@ -207,7 +218,7 @@ Module independentSets (DG : SimpleUndirectedGraphs).
     rewrite H0 in Hnot.
     rewrite H1 in Hnot.
     apply IsEdgeEnum in Hnot.
-    apply edges_antisymmetric in Hnot.
+    apply edges_irreflexive in Hnot.
     auto.
     apply vert_prop.Dec.F.empty_iff in H1; contradiction.
     apply vert_prop.Dec.F.empty_iff in H0; contradiction.
@@ -229,6 +240,21 @@ Module independentSets (DG : SimpleUndirectedGraphs).
       IndSet X G ->
       (forall x, ~ Vertices.In x X -> ~ IndSet (Vertices.add x X) G) ->
       MaximalIndSet_contrapos X G.
+
+  Definition maximalindset (X : Vertices.t) (G : t) : Prop :=
+    IndSet X G -> forall x, IsVertex x G -> Vertices.In x X \/ ~IndSet (Vertices.add x X) G.
+
+  Lemma idk : forall X G, {IndSet X G} + {~IndSet X G}.
+  Proof.
+    intros.
+    Admitted.
+
+  Lemma Maximal_eq : forall X G, MaximalIndSet X G <-> maximalindset X G.
+  Proof.
+    unfold maximalindset.
+    split; intros; auto.
+    inversion H.
+    Admitted.
 
   Theorem MaximalIndSet_eq : forall X G, MaximalIndSet X G <-> MaximalIndSet_contrapos X G.
   Proof.
@@ -293,9 +319,6 @@ Module independentSets (DG : SimpleUndirectedGraphs).
   Lemma MaximalIndSet_spec : forall X G x,
       let X' := (MkMaximalIndSet X G) in ~IndSet (Vertices.add x X') G \/ Vertices.In x X.
   Proof.
-    unfold not.
-    intros.
-    assert (IndSet (Vertices.add x X) G).
   Admitted.
   
   (* Just leaving this here if I end up needing something else or think 
@@ -307,12 +330,13 @@ Module independentSets (DG : SimpleUndirectedGraphs).
       Vertices.In x X \/ ~ IndSet (Vertices.add x (Mk_aux nil X G)) G.
   Proof.
     intros.
+    right.
   Admitted.
-    
 
   Lemma Mk_aux_spec : forall x a l X G, 
    Vertices.In x (Mk_aux l X G) <-> Vertices.In x (Mk_aux (a :: l) X G).
   Proof.
+    split;
     intros;
       simpl in *;
       destruct (indSet (Vertices.add a (Mk_aux l X G)) G) eqn:H1; auto;
@@ -320,14 +344,27 @@ Module independentSets (DG : SimpleUndirectedGraphs).
         try apply Vertices.add_spec;
         try apply Vertices.add_spec in H;
         auto.
-      Admitted.
+    destruct H.
+    apply indSet_true_iff in H1.
+    assert (IndSet (Vertices.add a (Mk_aux l X G)) G) by auto.
+    apply IndSet_add_spec in H1.
+    destruct H1; auto.
+    rewrite <- H in H1.
+    auto.
+    unfold not in H1.
+    apply H1 in H0; destruct H0.
+    auto.
+  Qed.
 
   (* This is used in the next proof and seems reasonable *)
   Lemma Mk_aux_spec1 : forall x a l X G,
       IndSet (Vertices.add x (Mk_aux (a :: l) X G)) G ->
       IndSet (Vertices.add x (Mk_aux l X G)) G.
     Proof.
-      Admitted.
+      intros.
+      simpl in *.
+      destruct (indSet (Vertices.add a (Mk_aux l X G)) G) eqn:H1; auto.
+    Admitted.
     
     (* MkMaximalIndSet actually makes a Maximal Independent Set *)
     Theorem MkMaximalIndSet_spec2 : forall X G,
@@ -350,11 +387,92 @@ Module independentSets (DG : SimpleUndirectedGraphs).
       auto.
     Qed.
   
-    
   Lemma MkMaximalIndSet_spec3 : forall (x : Vertices.E.t) (X : Vertices.t)  (G : t),
       True.
     Proof.
     Admitted.
 
+Definition LFMIS (G : t) (inp : Vertices.t) : Vertices.t -> Prop :=
+  fun (x : Vertices.t) =>  (MkMaximalIndSet inp G) =V= x.
+
+Definition LFMIS_bool (G : t) (inp : Vertices.t) : Vertices.t -> bool :=
+  fun( x : Vertices.t) => Vertices.equal (MkMaximalIndSet inp G) x.
+
+Definition isMIS G l :=  LFMIS_bool G l l.
+
+Definition IsMis G l := LFMIS G l l.
+
+Definition LiftGraph (V : Vertices.E.t) (G : t) := G.
+
+Definition mkC_aux V' l G : list Vertices.t:=
+  match l with
+  | nil => Vertices.empty :: nil
+  | cons cand l' =>
+    let newS := (Vertices.add V' cand)in
+    if independentSet newS G
+    then newS ::nil
+    else
+      if isMIS G ( Vertices.add V' (DG_Facts.rmvNeighbors V' G cand))  then
+        if LFMIS_bool (LiftGraph V' G) (DG_Facts.rmvNeighbors V' G cand) cand
+        then (Vertices.add V' (DG_Facts.rmvNeighbors V' G cand)) :: cand :: nil
+        else  cand :: nil
+      else cand :: nil
+  end.
 
 
+Inductive mkCS : vertex -> t -> list (list nat) -> list (list nat) -> Prop :=
+| mkCS_nilnil :
+    forall G l,
+      O = lV G -> 
+      mkCS O G l (nil::nil)
+| mkCS_Sxnil :
+    forall G x,
+      S x = lV G -> 
+      mkCS (S x) G nil nil
+| mkCS_indep :
+    forall G x cand Lin Lout,
+      S x = lV G -> 
+      mkCS (S x) G Lin Lout ->
+      independent_lGraph G (x :: cand) = true ->
+      mkCS (S x) G (cand :: Lin) ((x :: cand) :: Lout)
+| mkCS_nindep1 :
+    forall G x cand Lin Lout,
+      S x = lV G ->       
+      mkCS (S x) G Lin Lout ->
+      independent_lGraph G (x :: cand) = false ->
+      LFMIS G (x :: rmvNeighbors x G cand) (x :: rmvNeighbors x G cand) ->
+      LFMIS (LiftGraph x G) (rmvNeighbors x G cand) cand ->
+      mkCS (S x) G (cand :: Lin) ((x :: rmvNeighbors x G cand) :: cand :: Lout)
+| mkCS_nindep2 :
+    forall G x cand Lin Lout,
+      S x = lV G -> 
+      mkCS (S x) G Lin Lout ->
+      independent_lGraph G (x :: cand) = false ->
+      LFMIS G (x :: rmvNeighbors x G cand) (x :: rmvNeighbors x G cand) ->
+      ~LFMIS (LiftGraph x G) (rmvNeighbors x G cand) cand ->
+      mkCS (S x) G (cand :: Lin) (cand :: Lout)
+| mkCS_nindep3 :
+    forall G x cand Lin Lout,
+      S x = lV G ->       
+      mkCS (S x) G Lin Lout ->
+      independent_lGraph G (x :: cand) = false ->
+      ~LFMIS G (x :: rmvNeighbors x G cand) (x :: rmvNeighbors x G cand) ->
+      mkCS (S x) G (cand :: Lin) (cand :: Lout).
+
+
+                                                                                                                     
+(* Fixpoint mkCandidateSets (G : t) (l : list (Vertices.t)) :  list Vertices.t :=  *)
+(*   match lV G with *)
+(*   | O => nil::nil *)
+(*   | S V' => *)
+(*     match l with *)
+(*     | nil => nil *)
+(*     | cons cand l' => *)
+(*         if independent_lGraph G (V' :: cand) then (V' :: cand) :: mkCandidateSets G l' *)
+(*         else if isMIS G (V' :: rmvNeighbors V' G cand) *)
+(*              then if LFMIS_dec (LiftGraph V' G) (rmvNeighbors V' G cand) cand *)
+(*                   then (V' :: rmvNeighbors V' G cand) :: cand :: mkCandidateSets G l' *)
+(*                   else cand :: mkCandidateSets G l' *)
+(*              else cand :: mkCandidateSets G l' *)
+(*     end *)
+(*   end. *)
