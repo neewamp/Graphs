@@ -2,7 +2,7 @@ Require Import DirectedGraphs Ascii ExtrOcamlString.
 Require Import MSets MSetFacts PArith DirectedGraphs_morph.
 
 Module myGraph <: DirectedGraphs.
-  
+
   Require Import MSetRBT.
   Require Import ZArith.
   Module pos :=  PositiveOrderedTypeBits.
@@ -12,6 +12,14 @@ Module myGraph <: DirectedGraphs.
   Module Edge := PairOrderedType pos pos.
   Module Edges := MSetRBT.Make Edge.
 
+  Notation "V1 =V= V2" := (Vertices.eq V1 V2) (at level 60).
+  Notation "V1 <V> V2" := (~ Vertices.eq V1 V2) (at level 60). 
+  Notation "E1 =E= E2" := (Edges.eq E1 E2) (at level 60).
+  Notation "E1 <E> E2" := (~ Edges.eq E1 E2) (at level 60). 
+  Notation "v1 =v= v2" := (Vertices.E.eq v1 v2) (at level 60).
+  Notation "v1 <v> v2" := (~ Vertices.E.eq v1 v2) (at level 60). 
+  Notation "e1 =e= e2" := (Edges.E.eq e1 e2) (at level 60).
+  Notation "e1 <e> e2" := (~ Edges.E.eq e1 e2) (at level 60). 
 
   Module vert_facts := WFacts (Vertices).
   Module edge_facts := WFacts (Edges).
@@ -82,6 +90,34 @@ Module myGraph <: DirectedGraphs.
     fun (e : Edges.elt) (G : Graph) =>
       Edges.mem e (graphEdges G).
 
+  Lemma destructEdge_spec1 : forall (e1 e2 : edge),
+      e1 =e= e2 -> fst (destructEdge e1) =v= fst (destructEdge e2).
+  Proof.
+    intros.
+    unfold destructEdge.
+    destruct e1,e2.
+    rewrite H.
+    reflexivity.
+  Qed.
+
+  Lemma destructEdge_spec2 : forall (e1 e2 : edge),
+      e1 =e= e2 -> snd (destructEdge e1) =v= snd (destructEdge e2).
+  Proof.
+    intros.
+    unfold destructEdge.
+    destruct e1,e2.
+    rewrite H.
+    reflexivity.
+  Qed.
+
+  Lemma buildEdge_spec : forall v1 v2 v3 v4,
+      v1 =v= v2 -> v3 =v= v4 -> buildEdge v1 v3 =e= buildEdge v2 v4.
+  Proof.
+    intros.
+    rewrite H, H0.
+    reflexivity.
+  Qed.
+    
   Lemma IsEmpty_reflect :
     forall G : Graph, reflect (IsEmpty G) (isEmpty G).
   Proof.
@@ -281,14 +317,6 @@ Module myGraph <: DirectedGraphs.
     auto.
   Qed.
 
-  Notation "V1 =V= V2" := (Vertices.eq V1 V2) (at level 60).
-  Notation "V1 <V> V2" := (~ Vertices.eq V1 V2) (at level 60). 
-  Notation "E1 =E= E2" := (Edges.eq E1 E2) (at level 60).
-  Notation "E1 <E> E2" := (~ Edges.eq E1 E2) (at level 60). 
-  Notation "v1 =v= v2" := (Vertices.E.eq v1 v2) (at level 60).
-  Notation "v1 <v> v2" := (~ Vertices.E.eq v1 v2) (at level 60). 
-  Notation "e1 =e= e2" := (Edges.E.eq e1 e2) (at level 60).
-  Notation "e1 <e> e2" := (~ Edges.E.eq e1 e2) (at level 60). 
 
 
   Program Definition removeVertex  (v : vertex) (G : t) : t :=
@@ -637,21 +665,5 @@ End myGraph.
 Module g_prop :=  DirectedGraphMorph myGraph.
 Open Scope positive_scope.
 
-(*
-  Compute (g_prop.rebuildGraph_GraphConst2 (myGraph.addEdge  (1,2) (myGraph.addVertex 2 (myGraph.addVertex 1 (myGraph.empty))))).
 
-
-
-Extract Inductive bool => "bool" [ "true" "false" ].
-
-Extract Inductive list => "list" [ "[]" "(::)" ].
-(* Extract Inductive positive => int [ "XI" "XO" "XH" ] *)
-(*    "let rec int_of_pos p = *)
-(*   (match p with *)
-(*    |XH -> 1 *)
-(*    |XO p' -> 2 * (int_of_pos p') *)
-(*    |XI p' -> 2* (int_of_pos p') + 1)". *)
-(* Extraction "myGraph.ml"  myGraph. *)
-
-*)  
 

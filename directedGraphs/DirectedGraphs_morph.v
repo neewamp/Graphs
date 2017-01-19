@@ -71,6 +71,106 @@ Module DirectedGraphMorph (DG : DirectedGraphs).
       transitivity proved by (Equivalence.equiv_transitive EqualGraph_equiv)
     as eqGraph.
 
+
+
+    Definition destructEdge_eq1 (e1 e2 : edge): Prop :=
+      fst (destructEdge e1) =v= fst (destructEdge e2).
+
+
+    Definition destructEdge_eq2 (e1 e2 : edge) : Prop :=
+      snd (destructEdge e1) =v= snd (destructEdge e2).
+
+    Lemma destructEdge_eq1_r : Equivalence destructEdge_eq1.
+      Proof.
+        constructor;
+        unfold destructEdge_eq1; intros x; try reflexivity; auto.
+        intros.
+        rewrite H.
+        reflexivity.
+        intros.
+        rewrite H.
+        rewrite H0.
+        reflexivity.
+      Qed.
+
+   Lemma destructEdge_eq2_r : Equivalence destructEdge_eq2.
+     Proof.
+       constructor;
+         unfold destructEdge_eq2; intros x; try reflexivity; auto.
+       intros.
+       rewrite H.
+       reflexivity.
+       intros.
+       rewrite H.
+       rewrite H0.
+       reflexivity.
+     Qed.
+       
+    Add Parametric Relation : edge  destructEdge_eq1
+        reflexivity proved by (Equivalence.equiv_reflexive destructEdge_eq1_r)
+        symmetry proved by (Equivalence.equiv_symmetric destructEdge_eq1_r)
+        transitivity proved by (Equivalence.equiv_transitive destructEdge_eq1_r)
+          as destruct_eq_r_1.
+
+
+    Add Parametric Relation : edge  destructEdge_eq2
+        reflexivity proved by (Equivalence.equiv_reflexive destructEdge_eq2_r)
+        symmetry proved by (Equivalence.equiv_symmetric destructEdge_eq2_r)
+        transitivity proved by (Equivalence.equiv_transitive destructEdge_eq2_r)
+          as destruct_eq_r_2.
+        
+
+
+    Add Morphism buildEdge
+        with signature Vertices.E.eq ==> Vertices.E.eq ==> Edges.E.eq
+          as buildEdge_morph.
+    Proof.
+      intros.
+      apply buildEdge_spec; auto.
+    Qed.
+    
+    Add Morphism destructEdge
+        with signature Edges.E.eq ==> Vertices.E.eq * Vertices.E.eq
+                                  as destructEdge_morph.
+    Proof.
+      intros.
+      split.
+      apply destructEdge_spec1.
+      auto.
+      apply destructEdge_spec2.
+      auto.
+    Qed.
+
+    Add Morphism destructEdge_eq1
+        with signature destructEdge_eq1 ==> Edges.E.eq ==> iff
+          as destructEdge_eq1_morph.
+    Proof.
+      intros; split; intros;
+      unfold destructEdge_eq1 in *.
+      rewrite <- H0;
+      rewrite <- H1;
+      symmetry.
+      auto.
+      rewrite H0.
+      rewrite H.
+      auto.
+    Qed.
+
+    Add Morphism destructEdge_eq2
+        with signature destructEdge_eq2 ==> Edges.E.eq ==> iff
+          as destructEdge_eq2_morph.
+    Proof.
+      intros; split; intros;
+      unfold destructEdge_eq2 in *.
+      rewrite <- H0;
+      rewrite <- H1;
+      symmetry.
+      auto.
+      rewrite H0.
+      rewrite H.
+      auto.
+    Qed.
+    
     Add Morphism enumVertices
       with signature EqualGraph ==> Vertices.eq
     as enumVertices_morph.
@@ -533,18 +633,32 @@ Inductive GraphConst1 : t -> Type :=
     auto.
     apply rebuildGraph_GraphConst1_spec1.
   Qed.
+Module Import vOTF := OrderedTypeFacts Vertices.E.
+Module Import eOTF := OrderedTypeFacts Edges.E.
 
-  Definition neighborhood : vertex -> t -> Vertices.t.
+  Definition neighborhood_ind : vertex -> t -> Vertices.t.
   Proof.
     intros. apply rect1.
     constructor. apply Vertices.empty.
     intros. apply X1.
     intros. apply destructEdge in x. destruct x.
-    apply (if Vertices.E.eq_dec e X
+    apply (if vOTF.eqb e X
                 then (Vertices.add e0 X1)
                 else  X1). exact X0.
   Defined.
-    
+  
+  Print neighborhood_ind.
+
+  Definition neighborhood_fold (v : Vertices.E.t) (G : t): Vertices.t :=
+    Edges.fold (fun edge e =>
+                  if vOTF.eqb (fst (destructEdge edge)) v then Vertices.add (snd (destructEdge edge)) e
+                  else e) (enumEdges G) Vertices.empty.
+
+
+  Definition rmvNeighbors (v : Vertices.E.t) (G : t) (l : Vertices.t) := Vertices.fold (fun v' l' =>
+                        if isEdge (buildEdge v v') G then l'
+                        else (Vertices.add v' l')) (enumVertices G) Vertices.empty.
+
   Inductive GraphConst2 : t -> Type :=
   | Empty : GraphConst2 empty
   | GrowGraph : forall G,
@@ -562,7 +676,7 @@ Inductive GraphConst1 : t -> Type :=
            IsVertex (snd (destructEdge e)) G)) ->
        GraphConst2 (addEdges E (addVertex v1 G)).
 
-Module Import vOTF := OrderedTypeFacts Vertices.E.
+
   (* Generates the edges that need to be added to a graph GN, in order to
       satisfy GraphConst2, with the end goal of reconstructing G, given a vertex v1 *)
   Definition addEdges_GC2 (v1 : vertex) (G : t) (GN : t): Edges.t :=

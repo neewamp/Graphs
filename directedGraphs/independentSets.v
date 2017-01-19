@@ -10,16 +10,6 @@ Module independentSets (DG : SimpleUndirectedGraphs).
   Module vert_prop := WProperties (Vertices).
   Module vertFacts := OrderedTypeFacts Vertices.E.
   
-  (* Doesn't seem possible without adding something else 
-      to the module?  I'll probably look at this problem more in depth 
-     later in the week *)
-  Add Morphism buildEdge
-  with signature Vertices.E.eq ==> Vertices.E.eq ==> Edges.E.eq
-    as buildEdge_morph.
-  Proof.
-    Admitted.
-
-  
   (* Prop and bool definitions of an Independent Set with respect to a 
       Graph 
    *)
@@ -31,7 +21,90 @@ Module independentSets (DG : SimpleUndirectedGraphs).
     Vertices.for_all (fun v1 => Vertices.for_all
     (fun v2 => negb (Edges.mem (buildEdge v1 v2) (enumEdges G))) X) X.
 
-  (* They are the same.  Will probably change this to reflection later*)
+
+  Lemma annoyingProperV2 : 
+    forall v1 G,  Proper (Vertices.E.eq ==> eq)
+     (fun v2 : vertex =>
+      negb (Edges.mem (buildEdge v1 v2) (enumEdges G))).
+  Proof.
+    intros.
+    unfold Proper.
+    unfold respectful.
+    intros x y H.
+    erewrite buildEdge_spec; try reflexivity; 
+    auto.
+  Qed.
+
+  Lemma proper_aux : forall x0 G y0 X, x0 =v= y0 ->
+       Vertices.For_all
+         (fun x : vertex =>
+            negb (Edges.mem (buildEdge x0 x) (enumEdges G)) = true) X
+  ->
+Vertices.for_all
+     (fun v2 : vertex =>
+      negb (Edges.mem (buildEdge x0 v2) (enumEdges G))) X = true.
+
+  Proof.
+    intros.
+    apply Vertices.for_all_spec.
+    apply annoyingProperV2.
+    unfold Vertices.For_all. intros.
+    unfold Vertices.For_all in *; intros.
+    apply H0 in H1.
+    assert (buildEdge x0 x =e= buildEdge y0 x).
+    apply buildEdge_spec; try reflexivity; auto.
+    auto.
+  Qed.
+
+  Lemma proper_forall_helper : 
+    forall x0 y0 X G,
+      x0 =v= y0 ->
+      Vertices.for_all
+        (fun v2 : vertex =>
+           negb (Edges.mem (buildEdge x0 v2) (enumEdges G))) X =
+      Vertices.for_all
+        (fun v2 : vertex =>
+           negb (Edges.mem (buildEdge y0 v2) (enumEdges G))) X.
+  Proof.
+    intros.
+    case_eq (Vertices.for_all
+               (fun v2 : vertex =>
+                  negb (Edges.mem (buildEdge x0 v2) (enumEdges G)))X );
+      case_eq ( Vertices.for_all
+                  (fun v2 : vertex =>
+                     negb (Edges.mem (buildEdge y0 v2) (enumEdges G))) X);
+      intros; auto.
+    apply Vertices.for_all_spec in H1.
+    apply not_true_iff_false in H0.
+    unfold not in H0.
+    exfalso; apply H0.
+    apply Vertices.for_all_spec.
+    apply annoyingProperV2.
+    unfold Vertices.For_all.
+    intros.
+    apply H1 in H2.
+    assert ((buildEdge x0 x) =e= (buildEdge y0 x)).
+    apply buildEdge_spec; try reflexivity; auto.
+    rewrite <-  H3.
+    auto.
+    apply annoyingProperV2.
+    apply Vertices.for_all_spec in H0.
+    apply not_true_iff_false in H1.
+    unfold not in H1.
+    exfalso; apply H1.
+    apply proper_aux with (y0 := y0); auto.
+    unfold Vertices.For_all.
+    intros.
+    apply H0 in H2.
+    assert ((buildEdge x0 x) =e= (buildEdge y0 x)).
+    apply buildEdge_spec; try reflexivity;
+      auto.
+    rewrite H3.
+    auto.
+    apply annoyingProperV2.
+  Qed.
+
+  (* This was very annoying I'll try and make stuff look better later *)
   Theorem independentSet_true_iff :
     forall X G,
   independentSet X G = true <-> IndependentSet X G. 
@@ -49,28 +122,28 @@ Module independentSets (DG : SimpleUndirectedGraphs).
     unfold negb in H1.
     rewrite Hnot in H1.
     inversion H1.
+    apply annoyingProperV2.
     unfold Proper.
     unfold respectful.
     intros.
-    rewrite H3.
-    reflexivity.
-    admit.
-    apply Vertices.for_all_spec.
-    admit.
-    intros x H1.
-    apply Vertices.for_all_spec.
-    unfold Proper.
-    unfold respectful.
-    intros.
-    rewrite H0. auto.
-    intros x1 H2.
-    apply H with (x := x) (y := x1) in H1; auto.
-    rewrite <- Edges.mem_spec in H1.
-    apply negb_true_iff.
-    apply not_true_is_false in H1.
+    apply proper_forall_helper.
     auto.
-  Admitted.
-
+    apply Vertices.for_all_spec.
+    unfold Proper.
+    unfold respectful.
+    intros.
+    apply proper_forall_helper.
+    auto.
+    intros x1 H2.
+    apply Vertices.for_all_spec.
+    apply annoyingProperV2.
+    intros x H1.
+    rewrite negb_true_iff.
+    apply H with (x := x1) (y := x) in H2; auto.
+    rewrite <- Edges.mem_spec in H2.
+    apply not_true_is_false in H2.
+    auto.
+  Qed.
 
   (* The set contains only those vertices that are in G *)
   Definition ValidSet (X : Vertices.t) (G : t) :=
@@ -131,18 +204,6 @@ Module independentSets (DG : SimpleUndirectedGraphs).
     rewrite H1; auto.
   Qed.
   
-  Lemma hello : forall (x : nat), 2 * x = x + x.
-  Proof.
-    intros.
-    destruct x.
-    auto.
-    simpl.
-    rewrite <- plus_n_O.
-    auto.
-  Qed.
-  
-
-
   Theorem validSetRecr : 
     forall x (X : Vertices.t) G,
       ValidSet (Vertices.add x X) G -> ValidSet X G.
@@ -224,8 +285,6 @@ Module independentSets (DG : SimpleUndirectedGraphs).
     apply vert_prop.Dec.F.empty_iff in H0; contradiction.
   Qed.
 
-
-
   (* Definition of a Maximal Independent Set with respect to a graph *)
   Inductive MaximalIndSet (X : Vertices.t) (G : t) : Prop :=
   | defMaximalIndSet :
@@ -243,11 +302,6 @@ Module independentSets (DG : SimpleUndirectedGraphs).
 
   Definition maximalindset (X : Vertices.t) (G : t) : Prop :=
     IndSet X G -> forall x, IsVertex x G -> Vertices.In x X \/ ~IndSet (Vertices.add x X) G.
-
-  Lemma idk : forall X G, {IndSet X G} + {~IndSet X G}.
-  Proof.
-    intros.
-    Admitted.
 
   Lemma Maximal_eq : forall X G, MaximalIndSet X G <-> maximalindset X G.
   Proof.
@@ -303,7 +357,7 @@ Module independentSets (DG : SimpleUndirectedGraphs).
       try apply indSet_true_iff in H3;
     auto.
   Qed.
-  
+
   Theorem MkMaximalIndSet'_spec : forall X G,
       IndSet X G -> IndSet (MkMaximalIndSet' X G) G.
   Proof.
@@ -314,16 +368,16 @@ Module independentSets (DG : SimpleUndirectedGraphs).
       try apply indSet_true_iff in H4;
       auto.
   Qed.
-  
-  (* Might need more stuff for this and it might not even be useful *)
-  Lemma MaximalIndSet_spec : forall X G x,
-      let X' := (MkMaximalIndSet X G) in ~IndSet (Vertices.add x X') G \/ Vertices.In x X.
-  Proof.
-  Admitted.
-  
-  (* Just leaving this here if I end up needing something else or think 
-     of anything *) 
 
+  Theorem MkMaximalIndSet_max : forall X G,
+      IndSet X G -> MaximalIndSet (MkMaximalIndSet' X G) G.
+  Proof.
+    intros.
+    constructor.
+    apply MkMaximalIndSet'_spec. auto.
+    intros.
+    
+  
   (* I'm hoping this turns out to hold *) 
   Lemma IndSet_add_spec : forall x X G,
       IndSet (Vertices.add x (Mk_aux nil X G)) G ->

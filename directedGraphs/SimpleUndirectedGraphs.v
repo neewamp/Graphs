@@ -27,6 +27,16 @@ Module Type SimpleUndirectedGraphs.
   Parameter empty : t.  
   Parameter buildEdge : vertex -> vertex -> edge.
   Parameter destructEdge : edge -> vertex * vertex %type.
+
+  Parameter destructEdge_spec1 : forall (e1 e2 : edge),
+      e1 =e= e2 -> fst (destructEdge e1) =v= fst (destructEdge e2).
+  
+  Parameter destructEdge_spec2 : forall (e1 e2 : edge),
+      e1 =e= e2 -> snd (destructEdge e1) =v= snd (destructEdge e2).
+
+  Parameter buildEdge_spec : forall v1 v2 v3 v4,
+      v1 =v= v2 -> v3 =v= v4 -> buildEdge v1 v3 =e= buildEdge v2 v4.
+
   (*
   Parameter src : edge -> vertex.
   Parameter snk : edge -> vertex.
