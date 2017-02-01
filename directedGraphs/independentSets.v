@@ -107,8 +107,11 @@ Vertices.for_all
   (* This was very annoying I'll try and make stuff look better later *)
   Theorem independentSet_true_iff :
     forall X G,
-  independentSet X G = true <-> IndependentSet X G. 
+  reflect (IndependentSet X G) (independentSet X G). 
   Proof.
+    intros.
+    apply iff_reflect.
+    symmetry.
     unfold independentSet, IndependentSet.
     split; intros.
     intros Hnot.
@@ -176,8 +179,11 @@ Vertices.for_all
   Qed.
 
 
-  Theorem validSet_true_iff : forall X G, validSet X G = true <-> ValidSet X G.
+  Theorem validSet_true_iff : forall X G, reflect (ValidSet X G)( validSet X G).
   Proof.
+    intros.
+    apply iff_reflect.
+    symmetry.
     unfold validSet, ValidSet.
     split; intros; auto.
     {
@@ -221,19 +227,25 @@ Vertices.for_all
   Definition indSet (X : Vertices.t) (G : t) : bool :=
     validSet X G && independentSet X G.
 
-  Theorem indSet_true_iff : forall X G, indSet X G = true <-> IndSet X G.
+  Theorem indSet_true_iff : forall X G, reflect (IndSet X G) (indSet X G).
   Proof.
     intros.
+    apply  iff_reflect.
     unfold indSet.
-    split; try constructor;
-      try apply andb_true_iff in H;
-      try rewrite validSet_true_iff in H;
-      try rewrite independentSet_true_iff in H;
-      intuition.
-    inversion H.
-   rewrite andb_true_iff.
-   rewrite validSet_true_iff;
-   rewrite independentSet_true_iff; intuition.
+    assert (reflect (ValidSet X G) (validSet X G)).
+    apply validSet_true_iff.
+    split; try constructor; intuition.
+    destruct (independentSet_true_iff X G);
+      destruct (validSet_true_iff X G); auto;
+    inversion H0;
+    contradiction.
+    apply andb_true_iff in H0.
+    destruct H0.
+    destruct (validSet_true_iff X G); auto.
+    inversion H0.
+    destruct (independentSet_true_iff X G); auto.
+    apply andb_true_iff in H0.
+    destruct H0. inversion H1.
   Qed.
 
   Theorem nilIndSet : IndSet Vertices.empty DG.empty.
@@ -285,248 +297,41 @@ Vertices.for_all
     apply vert_prop.Dec.F.empty_iff in H0; contradiction.
   Qed.
 
-  (* Definition of a Maximal Independent Set with respect to a graph *)
-  Inductive MaximalIndSet (X : Vertices.t) (G : t) : Prop :=
-  | defMaximalIndSet :
-      IndSet X G ->
-      (forall x, IndSet (Vertices.add x X) G -> Vertices.In x X) ->
-      MaximalIndSet X G.
-  
-  (* An equivalent definition *) 
-  Inductive MaximalIndSet_contrapos
-  (X : Vertices.t) (G : t) : Prop :=
-  | defMaximalIndSet_contrapos :
-      IndSet X G ->
-      (forall x, ~ Vertices.In x X -> ~ IndSet (Vertices.add x X) G) ->
-      MaximalIndSet_contrapos X G.
-
-  Definition maximalindset (X : Vertices.t) (G : t) : Prop :=
-    IndSet X G -> forall x, IsVertex x G -> Vertices.In x X \/ ~IndSet (Vertices.add x X) G.
-
-  Lemma Maximal_eq : forall X G, MaximalIndSet X G <-> maximalindset X G.
+  Import DG_Facts.
+  Add Morphism IndSet
+      with signature Vertices.eq ==> EqualGraph ==> iff
+        as indSet_morph.
   Proof.
-    unfold maximalindset.
-    split; intros; auto.
-    inversion H.
-    Admitted.
-
-  Theorem MaximalIndSet_eq : forall X G, MaximalIndSet X G <-> MaximalIndSet_contrapos X G.
-  Proof.
-    split; intros H; constructor; inversion H; try intros x; auto.
-    destruct (vert_prop.In_dec x) with (s := X); auto.
-    apply H1 in n.
-    contradiction.
-  Qed.
-
-  (* Makes a maximal independent set by adding all vertices of a graph
-     to a set if adding them results in an independent set. *)
-  Fixpoint Mk_aux (s : list Vertices.E.t) (X : Vertices.t)
-           (g : t) : Vertices.t :=
-    match s with
-    | nil => X
-    | cons h t => if indSet (Vertices.add h (Mk_aux t X g)) g
-                  then (Vertices.add h (Mk_aux t X g)) else Mk_aux t X g
-    end.
-
-  
-  (* Calls Mk_aux with some set.  Maybe it would be nice to enforce that
-     X is an IndSet 
-   *)
-  Definition MkMaximalIndSet (X : Vertices.t) (G : t)
-    : Vertices.t :=
-    Mk_aux (Vertices.elements (enumVertices G)) X  G.
-
-
-  (* This seems like it should be an equivalent function *)
-  Definition MkMaximalIndSet' (X : Vertices.t) (G : t)
-    : Vertices.t :=
-    Vertices.fold (fun x X' =>
-                     if indSet (Vertices.add x X') G 
-                                 then
-                       (Vertices.add x X') else X') (enumVertices G) X.
-  
-  (* Some Specs about MkMaximalIndSet Start here *)
-  Theorem MkMaximalIndSet_spec : forall X G,
-      IndSet X G -> IndSet (MkMaximalIndSet X G) G.
-  Proof.
-    intros X G H.
-    unfold MkMaximalIndSet.
-    induction ((Vertices.elements (enumVertices G))); auto.
-    simpl.
-    destruct (indSet (Vertices.add a (Mk_aux l X G)) G) eqn:H3;
-      try apply indSet_true_iff in H3;
-    auto.
-  Qed.
-
-  Theorem MkMaximalIndSet'_spec : forall X G,
-      IndSet X G -> IndSet (MkMaximalIndSet' X G) G.
-  Proof.
-    intros X G H.
-    unfold MkMaximalIndSet'.
-    apply DG_Facts.VertProperties.P.fold_rec_weak; intros; auto.
-        destruct (indSet (Vertices.add x a) G) eqn:H4;
-      try apply indSet_true_iff in H4;
-      auto.
-  Qed.
-
-  Theorem MkMaximalIndSet_max : forall X G,
-      IndSet X G -> MaximalIndSet (MkMaximalIndSet' X G) G.
-  Proof.
-    intros.
-    constructor.
-    apply MkMaximalIndSet'_spec. auto.
-    intros.
-    
-  
-  (* I'm hoping this turns out to hold *) 
-  Lemma IndSet_add_spec : forall x X G,
-      IndSet (Vertices.add x (Mk_aux nil X G)) G ->
-      Vertices.In x X \/ ~ IndSet (Vertices.add x (Mk_aux nil X G)) G.
-  Proof.
-    intros.
-    right.
-  Admitted.
-
-  Lemma Mk_aux_spec : forall x a l X G, 
-   Vertices.In x (Mk_aux l X G) <-> Vertices.In x (Mk_aux (a :: l) X G).
-  Proof.
-    split;
-    intros;
-      simpl in *;
-      destruct (indSet (Vertices.add a (Mk_aux l X G)) G) eqn:H1; auto;
-        try rewrite H1 in H;
-        try apply Vertices.add_spec;
-        try apply Vertices.add_spec in H;
-        auto.
-    destruct H.
-    apply indSet_true_iff in H1.
-    assert (IndSet (Vertices.add a (Mk_aux l X G)) G) by auto.
-    apply IndSet_add_spec in H1.
-    destruct H1; auto.
-    rewrite <- H in H1.
-    auto.
-    unfold not in H1.
-    apply H1 in H0; destruct H0.
-    auto.
-  Qed.
-
-  (* This is used in the next proof and seems reasonable *)
-  Lemma Mk_aux_spec1 : forall x a l X G,
-      IndSet (Vertices.add x (Mk_aux (a :: l) X G)) G ->
-      IndSet (Vertices.add x (Mk_aux l X G)) G.
-    Proof.
+    split; intros; constructor; inversion H1; 
+      unfold ValidSet, IndependentSet in *; intros.
+    {
       intros.
-      simpl in *.
-      destruct (indSet (Vertices.add a (Mk_aux l X G)) G) eqn:H1; auto.
-    Admitted.
-    
-    (* MkMaximalIndSet actually makes a Maximal Independent Set *)
-    Theorem MkMaximalIndSet_spec2 : forall X G,
-        IndSet X G-> MaximalIndSet (MkMaximalIndSet X G) G.
-    Proof.
-      intros.
-      constructor.
-      apply MkMaximalIndSet_spec.
+      rewrite  <- H0.
+      apply H2.
+      rewrite H.
       auto.
+    }
+    {
       intros.
-      unfold MkMaximalIndSet in *.
-      induction (Vertices.elements (enumVertices G)).
-      simpl.
-      assert (IndSet (Vertices.add x (Mk_aux nil X G)) G) by auto.
-      apply IndSet_add_spec in H0.
-      destruct H0; auto; try contradiction.
-      apply Mk_aux_spec.
-      apply IHl.
-      apply Mk_aux_spec1 in H0.
+      rewrite <- H0.
+      apply H3; 
+        rewrite H; auto.
+    }
+    {
+      rewrite  H0.
+      apply H2.
+      rewrite <- H.
       auto.
+    }
+    {
+      intros.
+      rewrite  H0.
+      apply H3; rewrite <- H; auto.
+    }
     Qed.
   
-  Lemma MkMaximalIndSet_spec3 : forall (x : Vertices.E.t) (X : Vertices.t)  (G : t),
-      True.
-    Proof.
-    Admitted.
-
-Definition LFMIS (G : t) (inp : Vertices.t) : Vertices.t -> Prop :=
-  fun (x : Vertices.t) =>  (MkMaximalIndSet inp G) =V= x.
-
-Definition LFMIS_bool (G : t) (inp : Vertices.t) : Vertices.t -> bool :=
-  fun( x : Vertices.t) => Vertices.equal (MkMaximalIndSet inp G) x.
-
-Definition isMIS G l :=  LFMIS_bool G l l.
-
-Definition IsMis G l := LFMIS G l l.
-
-Definition LiftGraph (V : Vertices.E.t) (G : t) := G.
-
-Definition mkC_aux V' l G : list Vertices.t:=
-  match l with
-  | nil => Vertices.empty :: nil
-  | cons cand l' =>
-    let newS := (Vertices.add V' cand)in
-    if independentSet newS G
-    then newS ::nil
-    else
-      if isMIS G ( Vertices.add V' (DG_Facts.rmvNeighbors V' G cand))  then
-        if LFMIS_bool (LiftGraph V' G) (DG_Facts.rmvNeighbors V' G cand) cand
-        then (Vertices.add V' (DG_Facts.rmvNeighbors V' G cand)) :: cand :: nil
-        else  cand :: nil
-      else cand :: nil
-  end.
+  
+  End independentSets.
 
 
-Inductive mkCS : vertex -> t -> list (list nat) -> list (list nat) -> Prop :=
-| mkCS_nilnil :
-    forall G l,
-      O = lV G -> 
-      mkCS O G l (nil::nil)
-| mkCS_Sxnil :
-    forall G x,
-      S x = lV G -> 
-      mkCS (S x) G nil nil
-| mkCS_indep :
-    forall G x cand Lin Lout,
-      S x = lV G -> 
-      mkCS (S x) G Lin Lout ->
-      independent_lGraph G (x :: cand) = true ->
-      mkCS (S x) G (cand :: Lin) ((x :: cand) :: Lout)
-| mkCS_nindep1 :
-    forall G x cand Lin Lout,
-      S x = lV G ->       
-      mkCS (S x) G Lin Lout ->
-      independent_lGraph G (x :: cand) = false ->
-      LFMIS G (x :: rmvNeighbors x G cand) (x :: rmvNeighbors x G cand) ->
-      LFMIS (LiftGraph x G) (rmvNeighbors x G cand) cand ->
-      mkCS (S x) G (cand :: Lin) ((x :: rmvNeighbors x G cand) :: cand :: Lout)
-| mkCS_nindep2 :
-    forall G x cand Lin Lout,
-      S x = lV G -> 
-      mkCS (S x) G Lin Lout ->
-      independent_lGraph G (x :: cand) = false ->
-      LFMIS G (x :: rmvNeighbors x G cand) (x :: rmvNeighbors x G cand) ->
-      ~LFMIS (LiftGraph x G) (rmvNeighbors x G cand) cand ->
-      mkCS (S x) G (cand :: Lin) (cand :: Lout)
-| mkCS_nindep3 :
-    forall G x cand Lin Lout,
-      S x = lV G ->       
-      mkCS (S x) G Lin Lout ->
-      independent_lGraph G (x :: cand) = false ->
-      ~LFMIS G (x :: rmvNeighbors x G cand) (x :: rmvNeighbors x G cand) ->
-      mkCS (S x) G (cand :: Lin) (cand :: Lout).
 
-
-                                                                                                                     
-(* Fixpoint mkCandidateSets (G : t) (l : list (Vertices.t)) :  list Vertices.t :=  *)
-(*   match lV G with *)
-(*   | O => nil::nil *)
-(*   | S V' => *)
-(*     match l with *)
-(*     | nil => nil *)
-(*     | cons cand l' => *)
-(*         if independent_lGraph G (V' :: cand) then (V' :: cand) :: mkCandidateSets G l' *)
-(*         else if isMIS G (V' :: rmvNeighbors V' G cand) *)
-(*              then if LFMIS_dec (LiftGraph V' G) (rmvNeighbors V' G cand) cand *)
-(*                   then (V' :: rmvNeighbors V' G cand) :: cand :: mkCandidateSets G l' *)
-(*                   else cand :: mkCandidateSets G l' *)
-(*              else cand :: mkCandidateSets G l' *)
-(*     end *)
-(*   end. *)
