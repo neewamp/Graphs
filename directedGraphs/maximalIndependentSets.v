@@ -279,90 +279,278 @@ Ltac si :=
     reflexivity.
   Qed.
 
-    Lemma veryannoying : forall x,
-        (ordV.P.of_list (Vertices.elements (ordV.P.of_list x))) = ordV.P.of_list x.
+  Lemma listIn : forall x V, Vertices.In x V -> exists y, y = x /\ Vertices.In y V.
     Proof.
       intros.
-      induction x.
-      simpl.
-      admit.
-      Admitted.
+      exists x.
+      split.
+      auto.
+      auto.
+    Qed.
+
+    Module Import vOTF := OrderedTypeFacts Vertices.E.
+    Require Import Sorting.
+
+
+    Lemma list_cons A : forall (l: list A), (exists x l', l = x :: l') \/ l = [].
+      Proof.
+        intros.
+        induction l; auto.
+        destruct IHl.
+        do 2 destruct H.
+        left.
+        exists a,l.
+        auto.
+        left.
+        exists a, l.
+        auto.
+      Qed.
+
+    Lemma sort_subs : forall l1 l2, Sorted Vertices.E.lt (l1 ++ l2) -> Sorted Vertices.E.lt l1 /\ Sorted Vertices.E.lt l2.
+      Proof.
+        intros.
+        split.
+        induction l1.
+        admit.
+        inversion H.
+        constructor.
+        apply IHl1.
+        auto.
+        destruct l1.
+        constructor.
+        inversion H3.
+        constructor.
+        auto.
+
+        apply HdRel_inv in H3.
+
+        admit.
+        
+        inversion H.
+        admit.
+        
+
+        Admitted.
+
+    Lemma sorted_sort : forall x0 x1 x2, Sorted Vertices.E.lt (x0 ++ x1 :: x2) -> Sorted Vertices.E.lt x0 /\ Sorted Vertices.E.lt x2.
+    Proof.
+      intros.
+      apply Sorted_LocallySorted_iff in H.
+      split.
+      induction x0.
+      constructor.
+      apply Sorted_LocallySorted_iff in H.
+      apply Sorted_inv with (l := x0 ++ x1 :: x2) in H.
+      destruct H.
+      apply Sorted_LocallySorted_iff in H. 
+      constructor. admit.      
+(*       eapply HdRel_inv in H0. *)
+      
+
+(* admit. *)
+(*       induction x2. *)
+(*       constructor. *)
+(*       constructor. *)
+(*       apply IHx2. *)
+(*       inversion H. *)
+(*       admit. *)
+(*       admit. *)
+(*       apply Sorted_LocallySorted_iff in H. *)
+(*       inversion H. *)
+      (* admit. *)
+      
+
+      (* apply Sorted_LocallySorted_iff. *)
+      (* induction x0. *)
+      (* constructor. *)
+      (* apply Sorted_LocallySorted_iff in H. *)
+      (* apply Sorted_LocallySorted_iff. *)
+      (* apply Sorted_inv with (l := x0 ++ x1 :: x2) in H. *)
+      (* destruct H. *)
+      (* induction x2. *)
+      (* constructor. *)
+      (* apply Sorted_LocallySorted_iff. *)
+      (* apply Sorted_LocallySorted_iff in H. *)
+      (* auto. *)
+    (*   admit. *)
+      
+
+
+    (*   constructor. *)
+    (*   apply Sorted_LocallySorted_iff. *)
+    (*   apply IHx0. *)
+    (*   inversion H. *)
+    (*   apply Sorted_LocallySorted_iff. *)
+    (*   auto. *)
+    (*   apply Sorted_inv with (l := x0 ++ x1 :: x2) in H. *)
+    (*   destruct H. *)
+
+
+      
+    (*   apply Sorted_LocallySorted_iff in H. *)
+      
+
+
+    (*   admit. *)
+    (*   admit. *)
+      
+
+    (*   inversion H. *)
+    (*   admit. *)
+    (*   admit. *)
+      
+
+
+    (* Admitted. *)
+
+    Lemma equivA_elements : forall V y x, x = y /\ InA Vertices.E.eq y (Vertices.elements V) -> exists s1 s2, equivlistA Vertices.E.eq (Vertices.elements V)((Vertices.elements s1) ++  x :: (Vertices.elements s2)).
+  Proof.
+    intros.
+    assert ( exists l1 z l2, y =v=z /\ Vertices.elements V =
+                                       l1 ++ z :: l2).
+    apply InA_split.
+    intuition.
+    do 3 destruct H0.
+    exists (ordV.P.of_list x0).
+   intuition.
+    (*    exists x1.*)
+    exists (ordV.P.of_list x2).
+    assert (equivlistA Vertices.E.eq (Vertices.elements (ordV.P.of_list x0)) x0).
+    apply  ordV.P.of_list_2.
+    assert (equivlistA Vertices.E.eq (Vertices.elements (ordV.P.of_list x2)) x2).
+    apply ordV.P.of_list_2.
+    rewrite H4.
+    rewrite H0.
+    rewrite H3.
+    rewrite H1.
+    rewrite H.
+    reflexivity.
+  Qed.
+
+
+  Lemma to_list : forall l, Sorted Vertices.E.lt l ->
+                            exists s, eqlistA Vertices.E.eq l (Vertices.elements s).
+  Proof.
+    intros.
+    exists (ordV.P.of_list l).
+    assert ( equivlistA Vertices.E.eq (ordV.P.to_list (ordV.P.of_list l)) l).
+    apply ordV.P.of_list_2.
+    apply ordV.sort_equivlistA_eqlistA.
+    auto.
+    apply Vertices.elements_spec2.
+    symmetry.
+    auto.
+  Qed.
+
+  Lemma list_decomp : forall V y x, x = y /\ InA Vertices.E.eq y (Vertices.elements V) -> exists s1 s2, eqlistA Vertices.E.eq (Vertices.elements V) ((Vertices.elements s1) ++  x :: (Vertices.elements s2)).
+  Proof.
+    intros.
+    assert (exists (l1 : list vertex) (y : vertex) (l2 : list vertex),
+                x =v= y /\ Vertices.elements V = l1 ++ y :: l2).
+    apply InA_split.
+    intuition.
+    rewrite H0.
+    auto.
+    do 4 destruct H0.
+    assert (exists s, eqlistA Vertices.E.eq x0 (Vertices.elements s)).
+    assert (Sorted Vertices.E.lt (x0 ++ x1 :: x2)).
+    rewrite <- H1.
+    apply Vertices.elements_spec2.
+    apply to_list.
+    
+    admit.
+    assert (exists s, eqlistA Vertices.E.eq x2 (Vertices.elements s)).
+    apply to_list.
+    admit.
+    destruct H2, H3.
+    exists x3.
+    exists x4.
+    rewrite H1.
+    apply eqlistA_app.
+    apply Vertices.E.eq_equiv.
+    auto.
+    constructor.
+    symmetry; auto.
+    auto.
+  Admitted.
+
+(* init frist set is empty, list 
+   shift : list (sets vert) -> list (sets vert) 
+     cons a B -> (mkcs a) ++ B. 
+     can only can only be applied when not empty or not last vertex
+   dump : list (sets vert) -> list (sets vert) 
+   if its' a maximalind of the entire graph and dumps them somewhere.
+   terminate : nil -> stuff you have dumped. 
+*)
+
+  Lemma fold_equivlistLeft : forall G, 
+       forall s s' i,
+       eqlistA Vertices.E.eq s s' -> Vertices.Equal (fold_left (flip (growMisStep G)) s i) (fold_left (flip (growMisStep G)) s' i).
+    Proof.
+      intros.
+      do 2 rewrite  <- fold_left_rev_right.
+      eapply fold_right_eqlistA; eauto.
+      apply Vertices.eq_equiv.
+      unfold Proper.
+      unfold respectful.
+      intros.
+      rewrite H0.
+      rewrite H1.
+      reflexivity.
+      rewrite H.
+      reflexivity.
+    Qed.
+
 
   Theorem fold_decomp : forall v V X G, Vertices.In v V ->
     exists X' X'', growMis V X G =V=
-                   growMis X' ((growMisStep G) v (growMis X'' X G)) G /\
-                   Vertices.union X' (Vertices.add v X'') =V= V /\
-                   (forall x, Vertices.In x X' -> Vertices.E.lt v x) /\
-                   (forall x, Vertices.In x X'' -> Vertices.E.lt x v) /\
-                   (Vertices.union X'(Vertices.add v  X'')) =V= V.
+                   growMis X' ((growMisStep G) v (growMis X'' X G)) G.
   Proof.
     unfold growMis.
     intros.
+    apply listIn in H.
+    (* apply VertProperties.P.Dec.F.elements_1 in H. *)
+    (* apply InA_alt in H. *)
+    destruct H.
+    assert (exists l1 l2,  eqlistA Vertices.E.eq (Vertices.elements V) ((Vertices.elements l1) ++  x :: (Vertices.elements l2))).
+    eapply list_decomp.
+    intuition.
+    destruct H.
+    do 2 destruct H0.
+    exists x1,x0.
     rewrite Vertices.fold_spec.
+    (* assert (fold_right (growMisStep G) X (rev (Vertices.elements V)) =V=  fold_right (growMisStep G) X (rev ((Vertices.elements x0 ++ x :: Vertices.elements x1)))). *)
+    rewrite fold_equivlistLeft with (s' := (Vertices.elements x0 ++ x :: Vertices.elements x1)); auto.
+    rewrite fold_left_app.
+    rewrite fold_left_decomp.
+    rewrite <- Vertices.fold_spec.
+    rewrite <- Vertices.fold_spec.
+    rewrite H.
+    reflexivity.
+  Qed.
+
+  Theorem fold_decomp_spec : forall v V X G, Vertices.In v V ->
+      exists X' X'', growMis V X G =V=
+               growMis X' ((growMisStep G) v (growMis X'' X G)) G /\
+               (forall x, Vertices.In x X' -> Vertices.E.lt v x) /\
+               (forall x, Vertices.In x X'' -> Vertices.E.lt x v) /\
+               (Vertices.union X'(Vertices.add v  X'')) =V= V.
+  Proof.
+    intros.
+    assert (exists X' X'' : Vertices.t,
+     growMis V X G =V= growMis X' (growMisStep G v (growMis X'' X G)) G).
+    apply fold_decomp.
+    auto.
+    do 2 destruct H0.
+    exists x,x0.
+    split.
+    auto.
+    split.
+    intros.
     
-
-    assert (exists l1 l2, (Vertices.elements V) = (Vertices.elements l1) ++ v :: (Vertices.elements l2)).
-    admit.
-     (* apply InA_split. *)
-
-     (* apply VertProperties.P.Dec.F.elements_1; auto. *)
-     do 2 destruct H0.
-     rewrite H0.
-     rewrite fold_left_app.
-     rewrite fold_left_decomp.
-     exists (x0);
-     exists (x); split.
-     rewrite <- Vertices.fold_spec.
-     rewrite <- Vertices.fold_spec.
-     
-
-
-
-
-
-
-
-
-
-     admit.
-
-     
-
-
-    induction V using ordV.set_induction_max.
-    +
-      do 2 exists (Vertices.empty).
-                  split; try fsetdec.
-    +
-      intros.
-      rewrite ordV.P.Add_Equal in H0.
-      rewrite H0 in H1.
-      induction V2 using ordV.set_induction_min.
-      {
-        do 2 exists (Vertices.empty).
-                    split; try fsetdec.
-      }
-      exists (Vertices.add x Vertices.empty).
-      exists (Vertices.add x0 Vertices.empty).
-      split; intros; auto.
-      
-
-      admit.
-      split.
-      
-
-      admit.
-      
-
-
-      {
-        assert (Vertices.In v V1).
-        apply Vertices.add_spec in H1.
-        destruct H1.
-        
-
-    split; intros.
-
+    intros.
+    Admitted.
+  
 
 
 
