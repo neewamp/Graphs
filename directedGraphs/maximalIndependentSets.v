@@ -50,18 +50,18 @@ Module maximalIndSets (DG : SimpleUndirectedGraphs).
     contradiction.
   Qed.
 
-  Definition MkMaximalIndSet (X : Vertices.t) (G : t)
+  Definition MkMaximalIndSet' (X : Vertices.t) (G : t)
     : Vertices.t :=
     Vertices.fold (fun x X' =>
                      if indSet (Vertices.add x X') G 
                                  then
                        (Vertices.add x X') else X') (enumVertices G) X.
   
-  Theorem MkMaximalIndSet_spec : forall X G,
-      IndSet X G -> IndSet (MkMaximalIndSet X G) G.
+  Theorem MkMaximalIndSet'_spec : forall X G,
+      IndSet X G -> IndSet (MkMaximalIndSet' X G) G.
   Proof.
     intros X G H.
-    unfold MkMaximalIndSet.
+    unfold MkMaximalIndSet'.
     apply DG_Facts.VertProperties.P.fold_rec_weak; intros; auto.
         destruct (indSet (Vertices.add x a) G) eqn:H4;
       try apply indSet_true_iff in H4;
@@ -245,7 +245,7 @@ Ltac si :=
     si.
   Qed.
 
-  Theorem MkMaximalIndSet_mon : forall V X G, exists X',
+  Theorem MkMaximalIndSet'_mon : forall V X G, exists X',
         growMis V X G =V= Vertices.union X X'.
   Proof.
     intros V X G.
@@ -311,7 +311,7 @@ Ltac si :=
         intros.
         split.
         induction l1.
-        admit.
+        constructor.
         inversion H.
         constructor.
         apply IHl1.
@@ -321,87 +321,24 @@ Ltac si :=
         inversion H3.
         constructor.
         auto.
-
-        apply HdRel_inv in H3.
-
-        admit.
-        
+        generalize dependent l2.
+        induction l1; intros.
+        simpl in H.
+        auto.
         inversion H.
-        admit.
-        
-
-        Admitted.
+        apply IHl1.
+        auto.
+      Qed.
 
     Lemma sorted_sort : forall x0 x1 x2, Sorted Vertices.E.lt (x0 ++ x1 :: x2) -> Sorted Vertices.E.lt x0 /\ Sorted Vertices.E.lt x2.
     Proof.
       intros.
-      apply Sorted_LocallySorted_iff in H.
-      split.
-      induction x0.
-      constructor.
-      apply Sorted_LocallySorted_iff in H.
-      apply Sorted_inv with (l := x0 ++ x1 :: x2) in H.
-      destruct H.
-      apply Sorted_LocallySorted_iff in H. 
-      constructor. admit.      
-(*       eapply HdRel_inv in H0. *)
-      
+      apply sort_subs in H.
+      intuition.
+      inversion H1.
+      auto.
+    Qed.
 
-(* admit. *)
-(*       induction x2. *)
-(*       constructor. *)
-(*       constructor. *)
-(*       apply IHx2. *)
-(*       inversion H. *)
-(*       admit. *)
-(*       admit. *)
-(*       apply Sorted_LocallySorted_iff in H. *)
-(*       inversion H. *)
-      (* admit. *)
-      
-
-      (* apply Sorted_LocallySorted_iff. *)
-      (* induction x0. *)
-      (* constructor. *)
-      (* apply Sorted_LocallySorted_iff in H. *)
-      (* apply Sorted_LocallySorted_iff. *)
-      (* apply Sorted_inv with (l := x0 ++ x1 :: x2) in H. *)
-      (* destruct H. *)
-      (* induction x2. *)
-      (* constructor. *)
-      (* apply Sorted_LocallySorted_iff. *)
-      (* apply Sorted_LocallySorted_iff in H. *)
-      (* auto. *)
-    (*   admit. *)
-      
-
-
-    (*   constructor. *)
-    (*   apply Sorted_LocallySorted_iff. *)
-    (*   apply IHx0. *)
-    (*   inversion H. *)
-    (*   apply Sorted_LocallySorted_iff. *)
-    (*   auto. *)
-    (*   apply Sorted_inv with (l := x0 ++ x1 :: x2) in H. *)
-    (*   destruct H. *)
-
-
-      
-    (*   apply Sorted_LocallySorted_iff in H. *)
-      
-
-
-    (*   admit. *)
-    (*   admit. *)
-      
-
-    (*   inversion H. *)
-    (*   admit. *)
-    (*   admit. *)
-      
-
-
-    (* Admitted. *)
 
     Lemma equivA_elements : forall V y x, x = y /\ InA Vertices.E.eq y (Vertices.elements V) -> exists s1 s2, equivlistA Vertices.E.eq (Vertices.elements V)((Vertices.elements s1) ++  x :: (Vertices.elements s2)).
   Proof.
@@ -452,17 +389,17 @@ Ltac si :=
     rewrite H0.
     auto.
     do 4 destruct H0.
-    assert (exists s, eqlistA Vertices.E.eq x0 (Vertices.elements s)).
     assert (Sorted Vertices.E.lt (x0 ++ x1 :: x2)).
     rewrite <- H1.
     apply Vertices.elements_spec2.
+    apply sorted_sort in H2.
+    assert (exists s, eqlistA Vertices.E.eq x0 (Vertices.elements s)).
     apply to_list.
-    
-    admit.
+    intuition.
     assert (exists s, eqlistA Vertices.E.eq x2 (Vertices.elements s)).
     apply to_list.
-    admit.
-    destruct H2, H3.
+    intuition.
+    destruct H3, H4.
     exists x3.
     exists x4.
     rewrite H1.
@@ -472,7 +409,7 @@ Ltac si :=
     constructor.
     symmetry; auto.
     auto.
-  Admitted.
+  Qed.
 
 (* init frist set is empty, list 
    shift : list (sets vert) -> list (sets vert) 
@@ -509,8 +446,6 @@ Ltac si :=
     unfold growMis.
     intros.
     apply listIn in H.
-    (* apply VertProperties.P.Dec.F.elements_1 in H. *)
-    (* apply InA_alt in H. *)
     destruct H.
     assert (exists l1 l2,  eqlistA Vertices.E.eq (Vertices.elements V) ((Vertices.elements l1) ++  x :: (Vertices.elements l2))).
     eapply list_decomp.
@@ -519,7 +454,6 @@ Ltac si :=
     do 2 destruct H0.
     exists x1,x0.
     rewrite Vertices.fold_spec.
-    (* assert (fold_right (growMisStep G) X (rev (Vertices.elements V)) =V=  fold_right (growMisStep G) X (rev ((Vertices.elements x0 ++ x :: Vertices.elements x1)))). *)
     rewrite fold_equivlistLeft with (s' := (Vertices.elements x0 ++ x :: Vertices.elements x1)); auto.
     rewrite fold_left_app.
     rewrite fold_left_decomp.
@@ -532,7 +466,7 @@ Ltac si :=
   Theorem fold_decomp_spec : forall v V X G, Vertices.In v V ->
       exists X' X'', growMis V X G =V=
                growMis X' ((growMisStep G) v (growMis X'' X G)) G /\
-               (forall x, Vertices.In x X' -> Vertices.E.lt v x) /\
+               (forall x, Vertices.In x X' -> Vertices.E.lt x v) /\
                (forall x, Vertices.In x X'' -> Vertices.E.lt x v) /\
                (Vertices.union X'(Vertices.add v  X'')) =V= V.
   Proof.
@@ -547,96 +481,98 @@ Ltac si :=
     auto.
     split.
     intros.
-    
     intros.
     Admitted.
   
 
+(* show that the set is a subset of the vertices.  
+   then consider whether a vertex is a member of the set or not *)
 
+  Definition MkMaximalIndSet (X : Vertices.t) (G : t) :=
+    growMis (enumVertices G) X G.
+
+  Lemma  Mkequiv : forall X G,
+      MkMaximalIndSet X G = MkMaximalIndSet' X G.
+  Proof.
+    intros.
+    unfold MkMaximalIndSet.
+    unfold growMis.
+    unfold MkMaximalIndSet'.
+    unfold growMisStep.
+    reflexivity.
+  Qed.
+
+  Theorem MkMaximalIndSet_spec : forall X G,
+      IndSet X G -> IndSet (MkMaximalIndSet X G) G.
+  Proof.
+    intros X G H.
+    rewrite Mkequiv.
+    apply MkMaximalIndSet'_spec.
+    auto.
+  Qed.
+
+(* Module hi := MakeSetOrdering Vertices. *)
 
   Theorem MkMaximalIndSet_mon :forall X G, exists X',
         (MkMaximalIndSet X G) =V= Vertices.union X X'.
   Proof.
     intros X G.
-    induction X using ordV.P.set_induction.
-    unfold MkMaximalIndSet.
-    +
-      apply ordV.P.fold_rec_weak; intros; auto.
-      exists Vertices.empty.
-      rewrite VertProperties.P.empty_union_2; auto; try reflexivity.
-      apply VertProperties.P.empty_is_empty_2.
-      reflexivity.
-      destruct H1.
-      rewrite VertProperties.P.empty_union_1 in H1; auto.
-    destruct (indSet (Vertices.add x a) G).
-    exists (Vertices.add x x0).
-    rewrite VertProperties.P.empty_union_1; auto.
-    rewrite H1.
-    reflexivity.
-    exists (x0).
-    rewrite VertProperties.P.empty_union_1; auto.
-    +
-
-    destruct IHX1.
-    exists (x0).
-    
-    (* rewrite ordV.P.Add_Equal in H0. *)
-    (* assert (Vertices.union X2 x0 =V= Vertices.union ((Vertices.add x X1)) x0). *)
-    (* rewrite  H0. *)
-    (* reflexivity. *)
-    (* rewrite H2. *)
-    constructor.
-    intros.
-    unfold Vertices.eq in H1.
-    rewrite ordV.P.Add_Equal in H0.
-    rewrite  H0.
-    rewrite Vertices.union_spec.
-        
-
-
-    admit.
-    admit.
-    admit.
-    Admitted.
-
-  Lemma MkMaximalIndset_add : forall v X G,
-      ~ IsVertex v G -> IndSet X (addVertex v G) -> MaximalIndSet (MkMaximalIndSet X G) G
-      -> MaximalIndSet (MkMaximalIndSet X (addVertex v G)) (addVertex v G).
-  Proof.
-    intros.
-    assert (MaximalIndSet (MkMaximalIndSet X G) G) by auto.
-    (* inversion H1. *)
-    (* constructor. *)
-    (* constructor. *)
-    (* admit. *)
-    (* (* contradiction with addVeretex 3*) *)
-    (* admit. *)
-    (* intros. *)
-    (* if x is v or x is not v *)
-
-    apply MaximalIndSet_spec1 with (x := v) in H1.
-    (* either indSet X (add v) or not *)
-    destruct H1.
-    + (* v is not in G so no*)
-      unfold MkMaximalIndSet in H1.
-      admit.
-    +
-      (* If that's not an independet set v would not be added and things
-         Would still be maximal *)
-      Admitted.
+    assert (exists X' : Vertices.t, growMis (enumVertices G) X G =V= Vertices.union X X').
+    apply MkMaximalIndSet'_mon.
+    destruct H.
+    exists x.
+    auto.
+  Qed.
 
   Theorem MkMaximalIndSet_max : forall X G,
       IndSet X G -> MaximalIndSet (MkMaximalIndSet X G) G.
   Proof.
     intros.
+    constructor; intros.
+    apply MkMaximalIndSet_spec.
+    auto.
+    assert ({Vertices.In x (MkMaximalIndSet X G)} + {~Vertices.In x (MkMaximalIndSet X G)}).
+    apply ordV.P.In_dec.
+    destruct H1.
+    auto.
+    unfold MkMaximalIndSet in *.
+    assert (exists X' X'' : Vertices.t,
+         growMis (enumVertices G) X G =V=
+         growMis X' (growMisStep G x (growMis X'' X G)) G).
+    apply fold_decomp.
+    (* dec vert *)
+    admit.
+    do 2 destruct H1.
+    rewrite H1 in n.
+    unfold growMisStep in n.
+    case_eq (indSet (Vertices.add x (growMis x1 X G)) G).
+    intros.
+    rewrite H2 in n.
+    unfold growMis in n.
+    
 
 
+    
+    admit.
+    intros.
+    rewrite H2 in n.
+    rewrite H1 in H0.
+    assert ( exists X',
+        (MkMaximalIndSet X G) =V= Vertices.union X X').
+    apply MkMaximalIndSet_mon.
+    destruct H3.
+    unfold MkMaximalIndSet in H3.
+    rewrite H1 in H3.
+    rewrite H3 in H0.
+    Admitted.
+
+    
 
 Definition LFMIS (G : t) (inp : Vertices.t) : Vertices.t -> Prop :=
-  fun (x : Vertices.t) =>  (MkMaximalIndSet inp G) =V= x.
+  fun (x : Vertices.t) =>  (MkMaximalIndSet' inp G) =V= x.
 
 Definition LFMIS_bool (G : t) (inp : Vertices.t) : Vertices.t -> bool :=
-  fun( x : Vertices.t) => Vertices.equal (MkMaximalIndSet inp G) x.
+  fun( x : Vertices.t) => Vertices.equal (MkMaximalIndSet' inp G) x.
 
 Definition isMIS G l :=  LFMIS_bool G l l.
 
