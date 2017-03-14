@@ -1,8 +1,8 @@
-Require Import independentSets.
-Import DirectedGraphs_morph SimpleUndirectedGraphs.
+Require Import independentSets SetOrdering.
+Import DirectedGraphs_morph SimpleUndirectedGraphs .
 Import MSets.
 
-Module maximalIndSets (DG : SimpleUndirectedGraphs).
+Module MaximalIndSets (DG : SimpleUndirectedGraphs).
    Module ind :=  (independentSets DG).
    Import ind.
    Import DG.
@@ -209,6 +209,7 @@ Module maximalIndSets (DG : SimpleUndirectedGraphs).
     | [ |- ?X =V= ?X ] => reflexivity
     | _ => fsetdec
     end.
+
   Open Scope nat_scope.
 Ltac solve_by_inverts n :=
   match goal with | H : ?T |- _ => 
@@ -290,21 +291,6 @@ Ltac si :=
 
     Module Import vOTF := OrderedTypeFacts Vertices.E.
     Require Import Sorting.
-
-
-    Lemma list_cons A : forall (l: list A), (exists x l', l = x :: l') \/ l = [].
-      Proof.
-        intros.
-        induction l; auto.
-        destruct IHl.
-        do 2 destruct H.
-        left.
-        exists a,l.
-        auto.
-        left.
-        exists a, l.
-        auto.
-      Qed.
 
     Lemma sort_subs : forall l1 l2, Sorted Vertices.E.lt (l1 ++ l2) -> Sorted Vertices.E.lt l1 /\ Sorted Vertices.E.lt l2.
       Proof.
@@ -620,11 +606,10 @@ Ltac si :=
       apply Vertices.add_spec.
       intuition.
     +
-      
         do 2 destruct H1.
         rewrite H1 in n.
-      unfold growMisStep in n.
-      case_eq (indSet (Vertices.add x (growMis x1 X G)) G).
+        unfold growMisStep in n.
+        case_eq (indSet (Vertices.add x (growMis x1 X G)) G).
     -
       intros.
       rewrite H2 in n.
@@ -654,29 +639,206 @@ Ltac si :=
   Qed.
     
 
-Definition LFMIS (G : t) (inp : Vertices.t) : Vertices.t -> Prop :=
-  fun (x : Vertices.t) =>  (MkMaximalIndSet' inp G) =V= x.
+  (*Given two subset X, Y ⊆ V, such that X , Y, X < Y according to the lexicographic ordering
+if and only if the minimum element of X − Y is less than the minimum element of Y − X or
+Y − X = ∅.*)
 
-Definition LFMIS_bool (G : t) (inp : Vertices.t) : Vertices.t -> bool :=
-  fun( x : Vertices.t) => Vertices.equal (MkMaximalIndSet' inp G) x.
+  (* Here begins the lexegraphical ordering *)
+  
+  Theorem MaximalIndSet_subs : forall X Y G, Vertices.Subset X Y -> MaximalIndSet X G -> MaximalIndSet Y G ->  X =V= Y.
+  Proof.
+    intros X Y G H0 H1 H2. rewrite  MaximalIndSet_eq in *.
+    unfold Vertices.Subset in H0.  intros x. split; intros H3.
+    (* -> *)
+    apply H0 in H3. apply H3.
+    (* <- *)
+    assert ({Vertices.In x X} + {~ Vertices.In x X}) as H4. apply ordV.P.In_dec. 
+    destruct H4 as [H4| H4]. apply H4.
 
-Definition isMIS G l :=  LFMIS_bool G l l.
+    assert (False).
+    assert (~IndSet (Vertices.add x X) G) as H5. destruct H1 as [H1 H5].    apply H5. apply H4.
+    apply H5. constructor. intros y H6.
+    apply Vertices.add_spec in H6.
+    destruct H6 as [H6 | H6]. apply H2.
+    rewrite H6. auto. apply H1. auto.
+    intros y z H6 H7. apply H2.
+    apply Vertices.add_spec in H6.
+    destruct H6 as [H6 | H6].
+    rewrite H6. auto. auto. 
+    apply Vertices.add_spec in H7.
+    destruct H7 as [H7 | H7].
+    rewrite H7. auto. apply H0. auto. inversion H.
+  Qed.
+  
 
-Definition IsMis G l := LFMIS G l l.
+  Theorem IndSet_lift_spec : forall X x G,
+      MaximalIndSet X G -> IsVertex x G -> IndSet (Vertices.add x X) G -> Vertices.In x X.
+  Proof.
+    intros. rewrite -> MaximalIndSet_eq in H. destruct H as [[H2 H3] H4].
+    assert ( {Vertices.In x X}+{~Vertices.In x X} ) as H5 by (apply ordV.P.In_dec).
+    destruct H5 as [H5 | H5]. assumption.
+    exfalso. apply H4 in H5. contradiction.
+  Qed.
+  
 
-Definition LiftGraph (V : Vertices.E.t) (G : t) := G.
+  Theorem neg_incl_witness : forall X Y, ~ Vertices.Subset Y X <-> exists v, Vertices.In v Y /\ ~ Vertices.In v X.
+  Proof.
+    Admitted.
 
-Definition mkC_aux V' l G : list Vertices.t:=
-  match l with
-  | nil => Vertices.empty :: nil
-  | cons cand l' =>
-    let newS := (Vertices.add V' cand)in
-    if independentSet newS G
-    then newS ::nil
-    else
-      if isMIS G ( Vertices.add V' (DG_Facts.rmvNeighbors V' G cand))  then
-        if LFMIS_bool (LiftGraph V' G) (DG_Facts.rmvNeighbors V' G cand) cand
-        then (Vertices.add V' (DG_Facts.rmvNeighbors V' G cand)) :: cand :: nil
-        else  cand :: nil
-      else cand :: nil
-  end.
+  Inductive lt_list : list vertex -> list vertex -> Prop :=
+    lt_nil : forall (x : vertex ) (s : list vertex),
+      lt_list nil (x :: s)
+  | lt_cons_lt : forall (x y : vertex) (s s' : list vertex),
+      Vertices.E.lt x y ->
+      lt_list (x :: s) (y :: s')
+  | lt_cons_eq : forall (x y : vertex) (s s' : list vertex),
+      x = y ->
+      lt_list s s' ->
+      lt_list (x :: s) (y :: s').
+
+  Lemma lt_list_dec : forall l l', ~ eqlistA  Vertices.E.eq l l' -> {lt_list l l'} + {lt_list l' l}.
+  Proof.
+    intros.
+  Admitted.
+  
+  Hint Constructors lt_list.
+
+  Definition lt := lt_list.
+  Hint Unfold lt.
+
+  Lemma lt_strorder : StrictOrder lt.
+  Proof.
+    split.
+    {
+      assert (forall s s', s=s' -> ~lt s s').
+      red; intros. induction H0.
+      discriminate.
+      inversion H; subst.
+      apply (StrictOrder_Irreflexive y); auto.
+      inversion H; subst; auto.
+      intros s Hs. 
+      assert (s = s) by reflexivity.
+      apply H in H0.
+      contradiction.
+    }
+    {
+      intros s s' s'' H; generalize s''; clear s''; elim H.
+      intros x l s'' H'; inversion_clear H'; auto.
+      intros x x' l l' E s'' H'; inversion_clear H'; auto.
+      constructor 2. transitivity x'; auto.
+      constructor 2. rewrite <- H0; auto.
+      intros.
+      inversion_clear H3.
+      constructor 2. rewrite H0; auto.
+      constructor 3; auto. transitivity y; auto. unfold lt in *; auto.
+    }
+  Qed.
+
+
+  Definition lt_set s s' : Prop :=
+    lt_list (Vertices.elements s)  (Vertices.elements s').
+
+  Lemma eqLt : forall s s', ~ Vertices.Equal s s' -> Vertices.lt s s' \/ Vertices.lt s' s.
+    Proof.
+      intros.
+      destruct (Vertices.compare_spec s s'); try contradiction; auto.
+    Qed.
+
+  Lemma lt_not_eq : forall x y, Vertices.lt x y -> ~ Vertices.eq x y.
+  Proof.
+    intros x y H Hcontra.
+    destruct Vertices.lt_strorder as [X Y].              
+    destruct (Vertices.compare_spec x y).
+    { rewrite H0 in H; apply (X _ H). }
+    { rewrite Hcontra in H0; apply (X _ H0). }
+    rewrite Hcontra in H0; apply (X _ H0).      
+  Qed.      
+
+  Lemma lt_not : forall s s', Vertices.lt s' s -> ~ Vertices.lt s s'.
+  Proof.
+    intros.
+    intros Hnot.
+    assert (StrictOrder Vertices.lt).
+    apply Vertices.lt_strorder.
+    apply StrictOrder_Asymmetric in H0.
+    unfold Asymmetric in H0.
+    apply (H0 s' s H Hnot).
+  Qed.
+
+  Lemma dec_aux : forall s s', ~ Vertices.lt s' s <-> Vertices.Equal s' s \/ Vertices.lt s s'.
+    split;
+    intros.
+    destruct (Vertices.compare_spec s s'); auto.
+    left. symmetry. auto.
+    contradiction.
+    destruct H.
+    intros Hnot.
+    apply lt_not_eq in Hnot.
+    contradiction.
+    apply lt_not.
+    auto.
+  Qed.
+
+  Lemma lt_decOr : forall s s', Vertices.lt s s' \/ ~ Vertices.lt s s'.
+  Proof.
+    intros.
+    destruct (Vertices.compare_spec s s').
+    right.
+    apply dec_aux.
+    left.
+    auto.
+    auto.
+    apply lt_not in H.
+    auto.
+  Qed.
+      
+Module ord := MakeSetOrdering Vertices.E Vertices.
+Module Import mo := ord.MO.
+
+Module ordL := MakeListOrdering Vertices.E.
+
+
+(* I want to build an equivalence class from an arbitrary set.  
+   I need to partition the set.  Definition of an equivalence class for the.
+   set.
+   H :
+   norm X = 0 -> X = identity
+   eqa X Y -> norm X = norm Y. 
+   -------------------------------
+   Need some build equivalance.
+
+   forall x y, eqa x y -> eqc x = eqc y.
+
+ *)
+Module Import SetO := SetOrd Vertices.
+
+ Theorem MkMaximalIndSet_spec3 : forall X Y G,
+    IndSet X G -> MaximalIndSet Y G -> Vertices.Subset X Y ->
+    le (MkMaximalIndSet X G) Y.
+ Proof.
+   intros.
+   (* unfold Vertices.Subset in H1. *)
+   destruct (compare_le_spec (MkMaximalIndSet X G) Y); unfold le; try contradiction; auto.
+   unfold le in H2.
+   destruct H2; [left; symmetry; auto | auto].
+      
+
+
+      (* assert ((StrictOrder Vertices.lt)). *)
+      (* apply Vertices.lt_strorder. *)
+      (* apply StrictOrder_Asymmetric in H3. *)
+      (* unfold Asymmetric in H3. *)
+      (* unfold Vertices.Subset in H1. *)
+      (* destruct (lt_decOr (MkMaximalIndSet X G) Y). *)
+      (* exfalso; eauto. *)
+      (* assert (MaximalIndSet (MkMaximalIndSet X G) G). *)
+      (* apply MkMaximalIndSet_max. *)
+      (* auto. *)
+      (* eapply MaximalIndSet_subs in H1. *)
+      (* admit. *)
+   Admitted.
+      
+
+
+
+End MaximalIndSets.
