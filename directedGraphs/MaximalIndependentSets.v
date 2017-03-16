@@ -685,58 +685,6 @@ Y − X = ∅.*)
   Proof.
     Admitted.
 
-  Inductive lt_list : list vertex -> list vertex -> Prop :=
-    lt_nil : forall (x : vertex ) (s : list vertex),
-      lt_list nil (x :: s)
-  | lt_cons_lt : forall (x y : vertex) (s s' : list vertex),
-      Vertices.E.lt x y ->
-      lt_list (x :: s) (y :: s')
-  | lt_cons_eq : forall (x y : vertex) (s s' : list vertex),
-      x = y ->
-      lt_list s s' ->
-      lt_list (x :: s) (y :: s').
-
-  Lemma lt_list_dec : forall l l', ~ eqlistA  Vertices.E.eq l l' -> {lt_list l l'} + {lt_list l' l}.
-  Proof.
-    intros.
-  Admitted.
-  
-  Hint Constructors lt_list.
-
-  Definition lt := lt_list.
-  Hint Unfold lt.
-
-  Lemma lt_strorder : StrictOrder lt.
-  Proof.
-    split.
-    {
-      assert (forall s s', s=s' -> ~lt s s').
-      red; intros. induction H0.
-      discriminate.
-      inversion H; subst.
-      apply (StrictOrder_Irreflexive y); auto.
-      inversion H; subst; auto.
-      intros s Hs. 
-      assert (s = s) by reflexivity.
-      apply H in H0.
-      contradiction.
-    }
-    {
-      intros s s' s'' H; generalize s''; clear s''; elim H.
-      intros x l s'' H'; inversion_clear H'; auto.
-      intros x x' l l' E s'' H'; inversion_clear H'; auto.
-      constructor 2. transitivity x'; auto.
-      constructor 2. rewrite <- H0; auto.
-      intros.
-      inversion_clear H3.
-      constructor 2. rewrite H0; auto.
-      constructor 3; auto. transitivity y; auto. unfold lt in *; auto.
-    }
-  Qed.
-
-
-  Definition lt_set s s' : Prop :=
-    lt_list (Vertices.elements s)  (Vertices.elements s').
 
   Lemma eqLt : forall s s', ~ Vertices.Equal s s' -> Vertices.lt s s' \/ Vertices.lt s' s.
     Proof.
