@@ -346,7 +346,7 @@ Vertices.for_all
       apply Vertices.add_spec; intuition.
     Qed.
 
-  End independentSets.
+End independentSets.
 
 
 
