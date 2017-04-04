@@ -1,4 +1,4 @@
-Require Import independentSets SetOrdering auxProofs.
+Require Import IndependentSets SetOrdering auxProofs.
 Import DirectedGraphs_morph SimpleUndirectedGraphs .
 Import MSets.
 
