@@ -246,6 +246,7 @@ Module auxproofs (SG : SimpleUndirectedGraphs).
     admit.
   Admitted.
 
+
 End auxproofs.
 
 

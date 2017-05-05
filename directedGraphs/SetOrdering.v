@@ -1,5 +1,5 @@
 Require Export MSetInterface.
-Require Import MSets.
+Require Import MSets auxProofs.
 Module SetOrd (Vertices : Sets).
 
 
@@ -487,85 +487,169 @@ CompSpec Vertices.eq le s s' (Vertices.compare s s').
    Module ordDec := WDecide Vertices.
    Import ordDec.
 
+   Lemma help : forall X,
+       (exists x , Vertices.In x X) \/ Vertices.Empty X.
+   Proof.
+     intros.
+     induction X using ordV.P.set_induction; eauto.
+     destruct IHX1.
+     destruct H1;
+     apply ordV.P.Add_Equal in H0.
+     left.
+     exists x0.
+     rewrite H0.
+     rewrite Vertices.add_spec.
+     auto.
+     left.
+     exists x.
+     apply ordV.P.Add_Equal in H0.
+     rewrite H0.
+     rewrite Vertices.add_spec.
+     auto.
+   Qed.
 
-    Lemma lt_witness_list : forall X Y,
-        let X' := ordV.P.of_list X in
-        let Y' := ordV.P.of_list Y in 
-        ord.lt_list X Y -> subset_list X Y \/ exists x,
-      InA Vertices.E.eq x (Vertices.elements (Vertices.diff Y' X')) /\            (forall y, InA Vertices.E.eq y
+   Lemma sorted_lt_false : forall x y l l',
+       Sorted Vertices.E.lt (x :: l) ->
+       Sorted Vertices.E.lt (y :: l') ->
+       NoDupA Vertices.E.eq (x :: l) ->
+       NoDupA Vertices.E.eq (y :: l') ->
+       Vertices.E.lt x y ->
+       ~ InA Vertices.E.eq x (y :: l').
+   Proof.
+     intros.
+     inversion H.
+     inversion H0.
+     subst.
+     intros Hnot.
+     induction l'.
+     inversion Hnot.
+     subst.
+     assert (StrictOrder Vertices.E.lt).
+     apply Vertices.E.lt_strorder.
+     rewrite H5 in H3.
+     apply StrictOrder_Asymmetric in H4.
+     unfold Asymmetric in H4.
+     eauto.
+     inversion H5.
+     apply IHl'; auto; clear IHl'.
+     (* Well these are all provable but very annoying
+        maybe there is a better way to do this *)
+   (*   apply Sorted_inv in H0. *)
+   
+   Lemma diff_iff : forall x X Y,
+       InA Vertices.E.eq x X /\ ~ InA Vertices.E.eq x Y
+       <-> Vertices.In x (ordV.P.of_list X)
+                                  /\ ~ Vertices.In x (ordV.P.of_list Y).
+   Proof.
+     intros.
+     split; intros;
+     do 2 rewrite <- Vertices.elements_spec1 in *;
+     do 2 rewrite ordV.P.of_list_2 in *;
+     auto.
+   Qed.
+
+   Lemma lt_witness_list : forall X Y,
+       let X' := ordV.P.of_list X in
+       let Y' := ordV.P.of_list Y in
+       Sorted Vertices.E.lt X -> Sorted Vertices.E.lt Y ->
+       NoDupA Vertices.E.eq X -> NoDupA Vertices.E.eq Y -> 
+       ord.lt_list X Y -> subset_list X Y \/ exists x,
+      InA Vertices.E.eq x (Vertices.elements (Vertices.diff X' Y')) /\            (forall y, InA Vertices.E.eq y
           (Vertices.elements (Vertices.diff Y' X')) ->
                                Vertices.E.lt x y).
-  Proof.
-    intros.
-    unfold X',Y'.
-    clear X'.
-    clear Y'.
-    generalize dependent X.
-    generalize dependent Y.
-    intros.
-    induction H; unfold subset_list;
-      [left; intros; si |  | ].
-    {
-      right.
-      exists y.
-      split.
-      rewrite Vertices.elements_spec1 in *.      
-      apply Vertices.diff_spec.
-      simpl.
-      intuition.
-      admit.
-      intros.
-      rewrite Vertices.elements_spec1 in *.      
-      (* this case is easy *)
-      admit.
-    }
-    destruct IHlt_list.
-    left.
-    intros.
-    unfold subset_list in H1.
-    +
-        inversion H2.
-        *
-          subst.
-          rewrite H4.
-          rewrite H.
-          auto.
-        *
-          subst.
-          constructor 2.
-          auto.
-    +
-      destruct H1.
-      right.
-      exists x0.
-      destruct H1.
-      split.
-      *
-        rewrite Vertices.elements_spec1 in *.
-        apply Vertices.diff_spec.
-        split.
-        apply Vertices.diff_spec in H1.
-        intuition.
-        simpl in *.
-        apply Vertices.add_spec.
-        auto.
-        intros Hnot.
-        simpl in Hnot.
-        apply Vertices.add_spec in Hnot.
-        destruct Hnot.
-        specialize (H2 x0).
-        rewrite Vertices.elements_spec1 in *.
-        apply H2 in H1.
-        eapply ordV.ME.lt_irrefl; eauto.
-        apply Vertices.diff_spec in H1.
-        destruct H1.
-        contradiction.
-      *
-        intros.
-        apply H2 in H1.
-        exfalso.
-        eapply ordV.ME.lt_irrefl; eauto.
-  Admitted.
+   Proof.
+     intros.
+     unfold X',Y'.
+     clear X'.
+     clear Y'.
+     generalize dependent X.
+     generalize dependent Y.
+     intros.
+     induction H3; unfold subset_list;
+       [left; intros; si |  | ].
+     {
+       (* assert that the diff is sorted  *) 
+       right.
+       exists x.
+       split.
+       rewrite Vertices.elements_spec1 in *.      
+       apply Vertices.diff_spec.
+       rewrite <- diff_iff.
+       +
+         split.
+         apply InA_cons.
+         auto.
+         intros Hnot.
+         assert (~ InA Vertices.E.eq x (y :: s')).
+         apply sorted_lt_false with (l := s); auto.
+         contradiction.
+       +
+         intros.
+         rewrite Vertices.elements_spec1 in *.
+         apply Vertices.diff_spec in H4.
+         rewrite <- diff_iff in H4.
+         destruct H4.
+         (* Sorted extends ? *)
+         admit.
+     }
+     destruct IHlt_list.
+     apply Sorted_inv in H0.
+     intuition.
+     inversion H2.
+     auto.
+     apply Sorted_inv in H.
+     intuition.
+     inversion H1; auto.
+     left.
+     intros.
+     unfold subset_list in H5.
+     +
+       inversion H6.
+       *
+         subst.
+         rewrite H8.
+         rewrite H3.
+         auto.
+       *
+         subst.
+         constructor 2.
+         auto.
+     +
+       destruct H5.
+       right.
+       exists x0.
+       destruct H5.
+       rewrite Vertices.elements_spec1 in *.
+       rewrite Vertices.diff_spec in *.
+       rewrite <- diff_iff in *.
+       split.
+       *
+         destruct H5.
+         split.
+         apply InA_cons; auto.
+         intros Hnot.
+         apply InA_cons in Hnot.
+         destruct Hnot; auto.
+         rewrite H8 in H5.
+         rewrite <- H3 in H5.
+         (* Duplicates in s*)
+         admit.
+       *
+         intros.
+         specialize (H6 y0).
+         rewrite Vertices.elements_spec1 in *.
+         rewrite Vertices.diff_spec in *.
+         rewrite <- diff_iff in *.
+         destruct H7.
+         apply InA_cons in H7.
+         destruct H7.
+         rewrite H7 in H8.
+         rewrite H3 in H8. exfalso.
+         apply H8.
+         auto.
+         apply H6.
+         auto.
+   Admitted.
 
   Lemma sublist_iff : forall X Y, subset_list (Vertices.elements X) (Vertices.elements Y) <-> Vertices.Subset X Y.
   Proof.
@@ -583,11 +667,12 @@ CompSpec Vertices.eq le s s' (Vertices.compare s s').
   Qed.
 
 
-  Lemma lt_witness : forall X Y, lt_set X Y -> Vertices.Subset X Y \/ exists x,  Vertices.In x (Vertices.diff Y X) /\ (forall y, Vertices.In y (Vertices.diff Y X) ->  Vertices.E.lt x y).
+  Lemma lt_witness : forall X Y, lt_set X Y -> Vertices.Subset X Y \/ exists x,  Vertices.In x (Vertices.diff X Y) /\ (forall y, Vertices.In y (Vertices.diff Y X) ->  Vertices.E.lt x y).
   Proof.
     intros.
     unfold lt_set in H.
-    apply lt_witness_list in H.
+    apply lt_witness_list in H; try apply Vertices.elements_spec2;
+    try apply Vertices.elements_spec2w.
     destruct H.
     left.
     apply sublist_iff. auto.
