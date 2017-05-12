@@ -569,20 +569,6 @@ Y − X = ∅.*)
   Proof.
     Admitted.
 
-(* I want to build an equivalence class from an arbitrary set.  
-   I need to partition the set.  Definition of an equivalence class for the.
-   set.
-   H :
-   norm X = 0 -> X = identity
-   eqa X Y -> norm X = norm Y. 
-   -------------------------------
-   Need some build equivalance.
-
-   forall x y, eqa x y -> eqc x = eqc y.
-
- *)
-
-
   Lemma MkMaximalIndSet_spec4 : forall X G, Vertices.Subset X (MkMaximalIndSet X G).
  Proof.
    intros.
@@ -609,391 +595,391 @@ Y − X = ∅.*)
  Definition eleSub X Y := forall x , InA Vertices.E.eq x (Vertices.elements X) -> InA Vertices.E.eq x (Vertices.elements Y).
 
  Definition subset_list X Y := forall x , InA Vertices.E.eq x X -> InA Vertices.E.eq x Y.
-  
+ 
  Lemma subs_elements : forall X Y ,
      Vertices.Subset X Y -> eleSub X Y.
-   Proof.
-     intros.
-     unfold eleSub.
-     unfold Vertices.Subset in H.
-     intros.
-     apply ordV.P.Dec.F.elements_iff  with (x := x) in H; auto.
-     rewrite <- VertProperties.P.Dec.F.elements_iff in H0.
-     auto.
-   Qed.
+ Proof.
+   intros.
+   unfold eleSub.
+   unfold Vertices.Subset in H.
+   intros.
+   apply ordV.P.Dec.F.elements_iff  with (x := x) in H; auto.
+   rewrite <- VertProperties.P.Dec.F.elements_iff in H0.
+   auto.
+ Qed.
 
-   Lemma  not_le_lt_set : forall X Y, ~ le_set X Y ->
-                                      lt_set Y X.
-   Proof.
-     intros.
-     apply not_le_lt_rev in H.
-     auto.
-   Qed.
+ Lemma  not_le_lt_set : forall X Y, ~ le_set X Y ->
+                                    lt_set Y X.
+ Proof.
+   intros.
+   apply not_le_lt_rev in H.
+   auto.
+ Qed.
 
 
-   Lemma help : forall X,
-       (exists x , Vertices.In x X) \/ Vertices.Empty X.
-   Proof.
-     intros.
-     induction X using ordV.P.set_induction; eauto.
-     destruct IHX1.
-     destruct H1;
+ Lemma help : forall X,
+     (exists x , Vertices.In x X) \/ Vertices.Empty X.
+ Proof.
+   intros.
+   induction X using ordV.P.set_induction; eauto.
+   destruct IHX1.
+   destruct H1;
      apply ordV.P.Add_Equal in H0.
-     left.
-     exists x0.
-     rewrite H0.
+   left.
+   exists x0.
+   rewrite H0.
+   rewrite Vertices.add_spec.
+   auto.
+   left.
+   exists x.
+   apply ordV.P.Add_Equal in H0.
+   rewrite H0.
+   rewrite Vertices.add_spec.
+   auto.
+ Qed.
+
+ Lemma indset_singleton : forall x G,
+     Vertices.In x (enumVertices G) -> IndSet (Vertices.singleton x) G.
+ Proof.
+   intros.
+   constructor.
+   intros x0 H0; auto.
+   apply ordV.P.Dec.F.singleton_1 in H0.
+   rewrite <- H0.
+   auto.
+   intros x0 x1 H0 H1.
+   apply ordV.P.Dec.F.singleton_1 in H0.
+   apply ordV.P.Dec.F.singleton_1 in H1.
+   rewrite <- H0,H1.
+   rewrite <- IsEdgeEnum.
+   apply edges_irreflexive.
+ Qed.
+ 
+
+ Lemma ahhhh : forall X Y G,
+     MaximalIndSet (ordV.P.of_list X) G -> MaximalIndSet (ordV.P.of_list Y) G -> ord.lt_list X Y -> X <> [] /\ Y <> [].
+ Proof.
+   intros.
+   destruct X;
+     destruct Y.
+   inversion H1.
+   inversion H.
+   assert (IndSet (Vertices.add e (ordV.P.of_list [])) G).
+   { simpl.  rewrite <- ordV.P.singleton_equal_add.
+     apply indset_singleton.
+     assert (InA Vertices.E.eq e (Vertices.elements (ordV.P.of_list (e :: Y)))).
+     rewrite <- ordV.P.Dec.F.elements_iff.
+     simpl.
+     apply Vertices.add_spec.
+     auto.
+     eapply MaximalIndSet_spec; eauto.
+     apply  <- ordV.P.Dec.F.elements_iff in H4.
+     auto.
+   }
+   inversion H.
+   apply H6 in H4.
+   simpl in H4.
+   apply ordV.P.Dec.F.empty_iff in H4.
+   destruct H4.
+   inversion H1.
+   split; intros Hnot; inversion Hnot.
+ Qed.
+
+ Lemma notIn_notInd : forall x2 X G x,
+     Vertices.In x x2 -> 
+     ~ Vertices.In x (growMis x2 X G) -> exists X',
+         ~IndSet (Vertices.add x X') G /\ Vertices.Subset X' (growMis x2 X G).
+ Proof.
+   intros.
+   destruct (MkMaximalIndSet'_mon x2 X G).
+   unfold growMis in H.
+   destruct (fold_decomp_spec x x2 X G); auto.
+   do 2 destruct H2.
+   destruct H3.
+   unfold growMisStep in H2.
+   destruct (indSet (Vertices.add x (growMis x3 X G))) eqn:H5.
+   -
+     rewrite H2 in H0.
+     exfalso.
+     apply H0.
+     destruct (MkMaximalIndSet'_mon x1 (Vertices.add x (growMis x3 X G)) G).
+     rewrite H6.
+     apply Vertices.union_spec.
      rewrite Vertices.add_spec.
      auto.
-     left.
-     exists x.
-     apply ordV.P.Add_Equal in H0.
-     rewrite H0.
-     rewrite Vertices.add_spec.
+   -
+     exists (growMis x3 X G).
+     split.
+     destruct (indSet_reflect (Vertices.add x (growMis x3 X G)) G);
+       try si; auto.
+     rewrite H2.
+     destruct (MkMaximalIndSet'_mon x1 (growMis x3 X G) G).
+     rewrite H6.
+     intros x' H7.
+     apply Vertices.union_spec.
      auto.
-   Qed.
+ Qed.
 
-   Lemma indset_singleton : forall x G,
-       Vertices.In x (enumVertices G) -> IndSet (Vertices.singleton x) G.
-     Proof.
-       intros.
-       constructor.
-       intros x0 H0; auto.
-       apply ordV.P.Dec.F.singleton_1 in H0.
-       rewrite <- H0.
-       auto.
-       intros x0 x1 H0 H1.
-       apply ordV.P.Dec.F.singleton_1 in H0.
-       apply ordV.P.Dec.F.singleton_1 in H1.
-       rewrite <- H0,H1.
+ Lemma and_reflect : forall a b, reflect (a=true /\ b=true) (a && b) .
+ Proof.
+   intros.
+   apply iff_reflect.
+   symmetry.
+   apply andb_true_iff.
+ Qed.
+
+
+ Lemma IndSet_Mult_Add : forall x x0 X1 G,
+     ~ Edges.In (buildEdge x x0) (enumEdges G) /\
+     IndSet (Vertices.add x0 X1) G /\
+     IndSet (Vertices.add x X1) G -> 
+     IndSet (Vertices.add x (Vertices.add x0 X1)) G.
+ Proof.
+   intros.
+   intuition.
+   inversion H.
+   inversion H2.
+   constructor.
+   clear H3. clear H5.
+   {
+     unfold ValidSet in *.
+     intros.
+     apply Vertices.add_spec in H3.
+     destruct H3.
+     apply H4.
+     rewrite H3.
+     apply Vertices.add_spec.
+     auto.
+     apply Vertices.add_spec in H3.
+     destruct H3.
+     apply H1.
+     rewrite H3.
+     apply Vertices.add_spec; auto.
+     apply H4.
+     apply Vertices.add_spec; auto.
+   }
+   clear H4. clear H1.
+   unfold IndependentSet in *.
+   intros.
+   rewrite Vertices.add_spec in H1,H4.
+   destruct H4.
+   +
+     rewrite H4.
+     destruct H1.
+     *
+       rewrite H1.
        rewrite <- IsEdgeEnum.
        apply edges_irreflexive.
-     Qed.
-     
-
-     Lemma ahhhh : forall X Y G,
-         MaximalIndSet (ordV.P.of_list X) G -> MaximalIndSet (ordV.P.of_list Y) G -> ord.lt_list X Y -> X <> [] /\ Y <> [].
-     Proof.
-       intros.
-       destruct X;
-       destruct Y.
-       inversion H1.
-       inversion H.
-       assert (IndSet (Vertices.add e (ordV.P.of_list [])) G).
-       { simpl.  rewrite <- ordV.P.singleton_equal_add.
-         apply indset_singleton.
-         assert (InA Vertices.E.eq e (Vertices.elements (ordV.P.of_list (e :: Y)))).
-         rewrite <- ordV.P.Dec.F.elements_iff.
-         simpl.
-         apply Vertices.add_spec.
-         auto.
-         eapply MaximalIndSet_spec; eauto.
-         apply  <- ordV.P.Dec.F.elements_iff in H4.
+     *
+       rewrite Vertices.add_spec in H1.
+       destruct H1.
+       {
+         rewrite H1.
+         intros Hnot.
+         apply H0.
+         rewrite <- IsEdgeEnum in *.
+         apply undirected.
          auto.
        }
-       inversion H.
-       apply H6 in H4.
-       simpl in H4.
-       apply ordV.P.Dec.F.empty_iff in H4.
-       destruct H4.
-       inversion H1.
-       split; intros Hnot; inversion Hnot.
-     Qed.
-
-   Lemma notIn_notInd : forall x2 X G x,
-       Vertices.In x x2 -> 
-       ~ Vertices.In x (growMis x2 X G) -> exists X',
-  ~IndSet (Vertices.add x X') G /\ Vertices.Subset X' (growMis x2 X G).
-   Proof.
-     intros.
-     destruct (MkMaximalIndSet'_mon x2 X G).
-     unfold growMis in H.
-     destruct (fold_decomp_spec x x2 X G); auto.
-     do 2 destruct H2.
-     destruct H3.
-     unfold growMisStep in H2.
-     destruct (indSet (Vertices.add x (growMis x3 X G))) eqn:H5.
-     -
-       rewrite H2 in H0.
-       exfalso.
-       apply H0.
-       destruct (MkMaximalIndSet'_mon x1 (Vertices.add x (growMis x3 X G)) G).
-       rewrite H6.
-       apply Vertices.union_spec.
-       rewrite Vertices.add_spec.
-       auto.
-     -
-       exists (growMis x3 X G).
-       split.
-       destruct (indSet_reflect (Vertices.add x (growMis x3 X G)) G);
-         try si; auto.
-       rewrite H2.
-       destruct (MkMaximalIndSet'_mon x1 (growMis x3 X G) G).
-       rewrite H6.
-       intros x' H7.
-       apply Vertices.union_spec.
-       auto.
-   Qed.
-
-     Lemma and_reflect : forall a b, reflect (a=true /\ b=true) (a && b) .
-     Proof.
-       intros.
-       apply iff_reflect.
-       symmetry.
-       apply andb_true_iff.
-     Qed.
-
-     Lemma not_ind : forall X G,
-         ~IndSet X G -> ~IndependentSet X G \/ ~ ValidSet X G.
-     Proof.
-       intros.
-       destruct (help X).
-       destruct H0.
-       destruct (IsVertex_reflect G x).
-       left.
-       intros Hnot.
-       apply H.
-       constructor.
-       unfold ValidSet.
-       intros.
-       admit.
-       auto.
-       right. admit.
-       admit.
-       Admitted.
-
-
-     Lemma not_indep : forall x  X G,
-         IndependentSet X G -> 
-         ~ IndependentSet (Vertices.add x X) G ->
-         exists z, Edges.In (buildEdge x z) (enumEdges G) /\
-                   Vertices.In z X.
-     Proof.
-       Admitted.
-
-     
-     (* Ltac graphind1  G := *)
-     (*   match goal with *)
-     (*   | [ G : t |- ?G1 ] => *)
-     (*     set (fun G' : t=> (replace G with G' in G1)) as P; idtac G *)
-     (*   end. *)
-
-     Lemma not_ind_witness : forall x X G ,
-         IndSet X G -> IsVertex x G ->
-         ~ IndSet (Vertices.add x X) G ->
-       exists z : vertex,
-  Vertices.In z X /\ Edges.In (buildEdge x z) (enumEdges G).
-   Proof.
-     intros.
-     generalize dependent G.
-     (* set (fun G => exists z : vertex, *)
-     (* Vertices.In z X /\ Edges.In (buildEdge x z) (enumEdges G)). *)
-     (* change (P G). *)
-     intros G.
-     Ltac graphind1 G :=
-       match goal with
-       | [ |- context [?P  ?g]] => let G := fresh "G" in
-                                 set (fun G : t=> P)
-       end.
-       (*   set (fun G' : t=> change G with G') as P; idtac G *)
-       (* end. *)
-     graphind1 G.
-
-     
-     
-
-
-     set (fun G => IndSet X G ->
-   IsVertex x G ->
-   ~ IndSet (Vertices.add x X) G ->
-   exists z : vertex,
-     Vertices.In z X /\ Edges.In (buildEdge x z) (enumEdges G)).
-     change (P G).
-     apply DG_Facts.ind3.
-     admit.
-     unfold P.
-     intros.
-     admit.
-     unfold P.
-     intros.
-     admit.
-     intros.
-     unfold P in *.
-     intros.
-     
-
-
-
-     intros.
-     
-
-     apply not_ind in H1.
+       {
+         apply H5;
+           apply Vertices.add_spec;
+           auto.
+       }
+   +
      destruct H1.
-     
+     rewrite H1.
+     apply Vertices.add_spec in H4.
+     destruct H4.
+     *
+       rewrite H4.
+       intros Hnot.
+       eauto.
+     *
+       apply H5.
+       apply Vertices.add_spec.
+       auto.
+       apply Vertices.add_spec.
+       auto.
+     *
+       apply H3;
+         auto.
+ Qed.
 
-     
-     unfold IndependentSet in H1.
-     
 
 
-
-
-     assert (forall X G, IndSet X G -> IndependentSet X G /\ ValidSet X G).
-     admit.
-     specialize (H2 (Vertices.add x X) G).
-     assert (~ IndependentSet (Vertices.add x X) G).
-     intros Hnot.
-     apply H1.
+ Lemma not_ind_witness : forall x X G ,
+     IndSet X G -> IsVertex x G ->
+     ~ IndSet (Vertices.add x X) G ->
+     exists z : vertex,
+       Vertices.In z X /\ Edges.In (buildEdge x z) (enumEdges G).
+ Proof.
+   intros.
+   generalize dependent G.
+   induction X using ordV.P.set_induction.
+   {
+     intros.
+     assert (Vertices.Equal X Vertices.empty).
+     apply ordV.P.empty_is_empty_1; auto.
+     rewrite H3 in H2.
+     exfalso.
      apply H2.
-
-
-
-     do 2 destruct H.
-     exists x1.
+     rewrite IsVertexEnum in H1.
+     apply nilIndSetAdd; auto.
+   }
+   intros.
+   rewrite ordV.P.Add_Equal in H0.
+   rewrite H0 in *.
+   destruct (EdgeProperties.P.In_dec (buildEdge x x0) (enumEdges G)).
+   exists x0.
+   split; auto.
+   rewrite H0.
+   rewrite Vertices.add_spec. auto.
+   +
+     assert (~ IndSet (Vertices.add x X1) G).
+     intros Hnot.
+     apply H3.
+     assert (~ Edges.In (buildEdge x x0) (enumEdges G) /\
+             IndSet (Vertices.add x0 X1) G /\
+             IndSet (Vertices.add x X1) G -> 
+             IndSet (Vertices.add x (Vertices.add x0 X1)) G).
+     intros.
+     apply IndSet_Mult_Add.
+     auto.
+     apply H4.
+     auto.
+     apply IndSet_add in H1.
+     apply IHX1 in H1; auto.
+     destruct H1.
+     intuition.
+     exists x1; auto.
      split; auto.
-     rewrite H3.
+     rewrite H0.
      rewrite Vertices.add_spec.
      auto.
-     rewrite H3 in H1.
-     intros Hnot.
-     apply H1.
-     clear IHX1.
-     clear H1.
-     
+ Qed.
+ 
+ Lemma max_edge_contra : forall x x3 G Y, MaximalIndSet Y G ->
+                                          Edges.In (buildEdge x x3) (enumEdges G)
+                                          -> Vertices.In x3 Y -> Vertices.In x Y -> False.
+ Proof.
+   intros.
+   inversion H.
+   inversion H3.
+   unfold IndependentSet in H6.
+   specialize (H6 x x3).
+   apply H6; auto.
+ Qed.
 
+ Theorem MkMaximalIndSet_spec3 : forall X Y G,
+     IndSet X G -> MaximalIndSet Y G -> Vertices.Subset X Y ->
+     le_set (MkMaximalIndSet X G) Y.
+ Proof.
+   intros.
+   destruct (le_setReflect (MkMaximalIndSet X G) Y); auto.
+   apply not_le_lt_set in n.
+   assert (MaximalIndSet (MkMaximalIndSet X G) G).
+   apply MkMaximalIndSet_max.
+   auto.
+   assert (H3 : lt_set Y (MkMaximalIndSet X G)) by auto.
+   eapply lt_witness in n; eauto.
+   destruct n.
+   {
+     inversion H0.
+     apply le_set_spec.
+     left.
+     symmetry.
+     eapply MaximalIndSet_subs; eauto.
+   }
+   {
+     destruct H4.
+     destruct H4.
+     (* destruct (ordV.P.In_dec x (Vertices.diff (MkMaximalIndSet X G) Y)). *)
+     destruct (help (Vertices.diff (MkMaximalIndSet X G) Y)).
+     -
+       destruct H6.
+       assert (Vertices.In x0 (Vertices.diff (MkMaximalIndSet X G) Y))
+         by auto.
+       apply H5 in H6.
+       rewrite Vertices.diff_spec in *.
+       destruct (fold_decomp_spec x (enumVertices G) X G); auto.
+       eapply MaximalIndSet_spec with (Y := Y); eauto; intuition.
+       destruct H8.
+       destruct H8.
+       assert (H20 : lt_set Y (MkMaximalIndSet X G)) by auto.
+       rewrite H8 in H3.
+       unfold growMisStep in H3.
+       case_eq (indSet (Vertices.add x (growMis x2 X G)) G).
+       +
+         intros.
+         assert ( Vertices.In x (MkMaximalIndSet X G)).
+         rewrite H8.
+         unfold growMisStep.
+         rewrite H10.
+         destruct (MkMaximalIndSet'_mon x1  (Vertices.add x (growMis x2 X G)) G).
+         rewrite H11.
+         apply Vertices.union_spec.
+         rewrite  Vertices.add_spec.
+         auto.
+         destruct H4.
+         contradiction.
+       +
+         intros.
+         (* x \in output *)
+         (* find a z in (growMis x2 X G) that  *)
+         assert (exists z, Vertices.In z (growMis x2 X G) /\
+                           ~Vertices.In z Y).
+         destruct (not_ind_witness x (growMis x2 X G) G).
+         admit.
+         admit.
+         admit.
+         destruct (indSet_reflect (Vertices.add x (growMis x2 X G)) G);
+           auto; try si.
+         destruct (indSet_reflect (Vertices.add x (growMis x2 X G)) G);
+           try si.
+         destruct H11.
+         exists x3.
+         split; auto.
+         intros Hnot.
 
-
-
-
-     Admitted.
-
-   Lemma max_edge_contra : forall x x3 G Y, MaximalIndSet Y G ->
-       Edges.In (buildEdge x x3) (enumEdges G)
-                -> Vertices.In x3 Y -> Vertices.In x Y -> False.
-   Proof.
-     intros.
-     inversion H.
-     inversion H3.
-     unfold IndependentSet in H6.
-     specialize (H6 x x3).
-     apply H6; auto.
-   Qed.
-
-   Lemma grow_mis_spec : forall x x2 X G,
-       Vertices.In x (growMis x2 X G) ->
-       Vertices.In x x2 \/ Vertices.In x X.
-   Proof.
-     intros.
-     (* I need to know that x2 is a subset of the vertices. *)
-     Admitted.
-
-   Theorem MkMaximalIndSet_spec3 : forall X Y G,
-       IndSet X G -> MaximalIndSet Y G -> Vertices.Subset X Y ->
-       le_set (MkMaximalIndSet X G) Y.
-   Proof.
-     intros.
-     destruct (le_setReflect (MkMaximalIndSet X G) Y); auto.
-     apply not_le_lt_set in n.
-     assert (MaximalIndSet (MkMaximalIndSet X G) G).
-     apply MkMaximalIndSet_max.
-     auto.
-     assert (H3 : lt_set Y (MkMaximalIndSet X G)) by auto.
-     eapply lt_witness in n; eauto.
-     destruct n.
-     {
-       inversion H0.
-       apply le_set_spec.
-       left.
-       symmetry.
-       eapply MaximalIndSet_subs; eauto.
-     }
-     {
-       destruct H4.
-       destruct H4.
-       (* destruct (ordV.P.In_dec x (Vertices.diff (MkMaximalIndSet X G) Y)). *)
-       destruct (help (Vertices.diff (MkMaximalIndSet X G) Y)).
-       -
-         destruct H6.
-         assert (Vertices.In x0 (Vertices.diff (MkMaximalIndSet X G) Y))
-           by auto.
-         apply H5 in H6.
-         rewrite Vertices.diff_spec in *.
-         destruct (fold_decomp_spec x (enumVertices G) X G); auto.
-         eapply MaximalIndSet_spec with (Y := Y); eauto; intuition.
-         destruct H8.
-         destruct H8.
-         assert (H20 : lt_set Y (MkMaximalIndSet X G)) by auto.
-         rewrite H8 in H3.
-         unfold growMisStep in H3.
-         case_eq (indSet (Vertices.add x (growMis x2 X G)) G).
-         +
-           intros.
-           assert ( Vertices.In x (MkMaximalIndSet X G)).
+         (* find the witness that makes adding x to growMis x2 X G not
+          an indSet and show that it is in growMis *)
+         destruct (indSet_reflect (Vertices.add x (growMis x2 X G)) G).
+         try si.
+         clear H10.
+         apply (max_edge_contra x x3 G Y); destruct H4; auto.
+         destruct H11.
+         assert (Vertices.In x3 x2).
+         (* annoying *)
+         admit.
+         assert (Vertices.In x3 (MkMaximalIndSet X G) /\
+                 ~ Vertices.In x3 Y).
+         {
            rewrite H8.
+           destruct H11.
+           split; auto.
+           destruct (MkMaximalIndSet'_mon x1
+                                          (growMisStep G x (growMis x2 X G)) G).
+           rewrite H14.
+           apply Vertices.union_spec.
+           left.
            unfold growMisStep.
            rewrite H10.
-           destruct (MkMaximalIndSet'_mon x1  (Vertices.add x (growMis x2 X G)) G).
-           rewrite H11.
-           apply Vertices.union_spec.
-           rewrite  Vertices.add_spec.
            auto.
-           destruct H4.
-           contradiction.
-         +
-           intros.
-           (* x \in output *)
-           (* find a z in (growMis x2 X G) that  *)
-           assert (exists z, Vertices.In z (growMis x2 X G) /\
-                             ~Vertices.In z Y).
-           destruct (not_ind_witness x x2 X G).
-           (* any subset of the output should be an Indset *)
-           admit.
-           destruct (indSet_reflect (Vertices.add x (growMis x2 X G)) G);
-             try si.
-           destruct H11.
-           exists x3.
-           split; auto.
-           intros Hnot.
-           
-
-           (* find the witness that makes adding x to growMis x2 X G not
-          an indSet and show that it is in growMis *)
-           destruct (indSet_reflect (Vertices.add x (growMis x2 X G)) G).
-           try si.
-           clear H10.
-           apply (max_edge_contra x x3 G Y); destruct H4; auto.
-           destruct H11.
-           assert (Vertices.In x3 x2).
-           
-
-           admit.
-           assert (Vertices.In x3 (MkMaximalIndSet X G) /\
-                   ~ Vertices.In x3 Y).
-           {
-             rewrite H8.
-             destruct H11.
-             split; auto.
-             destruct (MkMaximalIndSet'_mon x1
-                                            (growMisStep G x (growMis x2 X G)) G).
-             rewrite H14.
-             apply Vertices.union_spec.
-             left.
-             unfold growMisStep.
-             rewrite H10.
-             auto.
-           }
-           rewrite <- Vertices.diff_spec in H13, H4.
-           apply H5 in H13.
-           destruct H9.
-           apply H14 in H12.
-           destruct H12.
-           assert (StrictOrder Vertices.E.lt).
-           apply Vertices.E.lt_strorder.
-           exfalso.
-           apply StrictOrder_Asymmetric in H13.
-           auto.
-           auto.
-   Admitted.
-   
+         }
+         rewrite <- Vertices.diff_spec in H13, H4.
+         apply H5 in H13.
+         destruct H9.
+         apply H14 in H12.
+         destruct H12.
+         assert (StrictOrder Vertices.E.lt).
+         apply Vertices.E.lt_strorder.
+         exfalso.
+         apply StrictOrder_Asymmetric in H13.
+         auto.
+         auto.
+ Admitted.
+ 
 End MaximalIndSets.
 
 (* init first set is empty, list 
@@ -1003,6 +989,6 @@ End MaximalIndSets.
    dump : list (sets vert) -> list (sets vert) 
    if its' a maximalind of the entire graph and dumps them somewhere.
    terminate : nil -> stuff you have dumped. 
-   *)
+ *)
 
 

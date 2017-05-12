@@ -24,7 +24,7 @@ Module Type DirectedGraphs.
   Declare Module Edges : Sets.
   (* the type of a vertex *)
   Declare Module Vertices : Sets.
-  Notation vertex := Vertices.elt.
+  Notation vertex := Vertices.elt. (* Vertices.E.t *)
   
   (* The type of an edge *)
   Notation edge := Edges.elt.
@@ -145,4 +145,5 @@ Module Type DirectedGraphs.
   Parameter removeEdge_spec3 :
     forall G v e,
       IsVertex v G <-> IsVertex v (removeEdge e G).
+
 End DirectedGraphs.
