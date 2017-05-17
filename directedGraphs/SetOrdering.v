@@ -1,5 +1,5 @@
 Require Export MSetInterface.
-Require Import MSets auxProofs.
+Require Import MSets .
 Module SetOrd (Vertices : Sets).
 
 
@@ -483,9 +483,8 @@ CompSpec Vertices.eq le s s' (Vertices.compare s s').
     auto.
   Qed.
 
-
-   Module ordDec := WDecide Vertices.
-   Import ordDec.
+   Hint Resolve Vertices.E.eq_equiv.
+   Hint Resolve Vertices.E.lt_strorder Vertices.E.lt_compat.
 
    Lemma help : forall X,
        (exists x , Vertices.In x X) \/ Vertices.Empty X.
@@ -508,6 +507,15 @@ CompSpec Vertices.eq le s s' (Vertices.compare s s').
      auto.
    Qed.
 
+   Lemma Sorted_Cons_Lt : forall x y l,
+       Sorted Vertices.E.lt (x :: l) -> NoDupA Vertices.E.eq (x :: l) ->
+       InA Vertices.E.eq y l -> Vertices.E.lt x y.
+   Proof.
+     intros x y l H H1 H2.
+     inversion H; subst;
+     eapply SortA_InfA_InA with (l := l); eauto.
+   Qed.
+
    Lemma sorted_lt_false : forall x y l l',
        Sorted Vertices.E.lt (x :: l) ->
        Sorted Vertices.E.lt (y :: l') ->
@@ -517,25 +525,20 @@ CompSpec Vertices.eq le s s' (Vertices.compare s s').
        ~ InA Vertices.E.eq x (y :: l').
    Proof.
      intros.
-     inversion H.
-     inversion H0.
-     subst.
      intros Hnot.
-     induction l'.
-     inversion Hnot.
-     subst.
-     assert (StrictOrder Vertices.E.lt).
-     apply Vertices.E.lt_strorder.
+     inversion Hnot; subst;
+     assert (StrictOrder Vertices.E.lt); eauto;
+     exfalso;
+     apply StrictOrder_Asymmetric in H4;
+     unfold Asymmetric in H4;
+     specialize (H4 x y);
+     apply H4; auto.
+     rewrite H5.
      rewrite H5 in H3.
-     apply StrictOrder_Asymmetric in H4.
-     unfold Asymmetric in H4.
-     eauto.
-     inversion H5.
-     apply IHl'; auto; clear IHl'.
-     (* Well these are all provable but very annoying
-        maybe there is a better way to do this *)
-   (*   apply Sorted_inv in H0. *)
-   
+     auto.
+     apply Sorted_Cons_Lt with (l := l'); eauto.
+   Qed.
+     
    Lemma diff_iff : forall x X Y,
        InA Vertices.E.eq x X /\ ~ InA Vertices.E.eq x Y
        <-> Vertices.In x (ordV.P.of_list X)
@@ -589,8 +592,11 @@ CompSpec Vertices.eq le s s' (Vertices.compare s s').
          apply Vertices.diff_spec in H4.
          rewrite <- diff_iff in H4.
          destruct H4.
-         (* Sorted extends ? *)
-         admit.
+         inversion H4;subst.
+         rewrite H7. auto.
+         assert (Vertices.E.lt y y0).
+         apply Sorted_Cons_Lt with (l :=  s'); eauto.
+         transitivity y; auto.
      }
      destruct IHlt_list.
      apply Sorted_inv in H0.
@@ -632,8 +638,9 @@ CompSpec Vertices.eq le s s' (Vertices.compare s s').
          destruct Hnot; auto.
          rewrite H8 in H5.
          rewrite <- H3 in H5.
-         (* Duplicates in s*)
-         admit.
+         inversion H1.
+         subst.
+         contradiction.
        *
          intros.
          specialize (H6 y0).
@@ -649,7 +656,7 @@ CompSpec Vertices.eq le s s' (Vertices.compare s s').
          auto.
          apply H6.
          auto.
-   Admitted.
+   Qed.
 
   Lemma sublist_iff : forall X Y, subset_list (Vertices.elements X) (Vertices.elements Y) <-> Vertices.Subset X Y.
   Proof.
