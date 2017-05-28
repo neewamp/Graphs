@@ -1,7 +1,10 @@
-Require Export MSetInterface.
-Require Import MSets .
-Module SetOrd (Vertices : Sets).
+(* Contains an ordering on over sets 
+   Also an ordered type for a set of Maximal Independent Sets
+*)
 
+Require Export MSetInterface.
+Require Import MSets Orders List.
+Module SetOrd (Vertices : Sets).
 
   Open Scope nat_scope.
 Ltac solve_by_inverts n :=
@@ -17,54 +20,7 @@ Ltac si :=
 
 
   Module ordV := OrdProperties Vertices.
-  Definition le (s s' : Vertices.t) : Prop := Vertices.Equal s s' \/ Vertices.lt s s'.
 
-  Lemma pre_le : PreOrder le.
-  Proof.
-    intros.
-    constructor.
-    unfold le.
-    left.
-    reflexivity.
-    unfold le.
-    unfold Transitive.    
-    intros.
-    destruct H; destruct H0; auto.
-    left. rewrite H. auto.
-    right. rewrite H. auto.
-    right. rewrite  <- H0. auto.
-    right. rewrite H. auto.
-  Qed.
-
-  Lemma PartialOrder_le : forall (preo : PreOrder le), PartialOrder Vertices.Equal le .
-  Proof.
-    intros.
-    constructor.
-    intros.
-    constructor.
-    left.
-    auto.
-    left.
-    symmetry.
-    auto.
-    intros.
-    inversion H.
-    unfold le in H0,H1.
-    destruct H0,H1;
-    auto; try symmetry; auto.
-    assert ((StrictOrder Vertices.lt)).
-    apply Vertices.lt_strorder.
-    apply StrictOrder_Asymmetric in H2.
-    exfalso.
-    apply (H2 x x0 H0 H1).
-  Qed.
-
-  Lemma compare_le_spec : forall s s' : Vertices.t,
-CompSpec Vertices.eq le s s' (Vertices.compare s s').
-  Proof.
-    intros.
-      destruct (Vertices.compare_spec s s'); unfold le; try contradiction; auto.
-  Qed.
 
 (* Make sure that things are sorted eventually *)
   Inductive le_list : list Vertices.E.t -> list Vertices.E.t -> Prop :=
@@ -78,8 +34,6 @@ CompSpec Vertices.eq le s s' (Vertices.compare s s').
       le_list s s' ->
       le_list (x :: s) (y :: s').
 
-  Require Import List.
-
   Module ordVertFacts := OrderedTypeFacts Vertices.E.
   
   Fixpoint le_listb s s' :=
@@ -90,7 +44,7 @@ CompSpec Vertices.eq le s s' (Vertices.compare s s').
           else if ordVertFacts.eq_dec x y then le_listb l l' else
                            false
     end.
-
+  
   Lemma le_listReflect : forall l l', reflect (le_list l l')
                                               (le_listb l l').
   Proof.
@@ -284,8 +238,21 @@ CompSpec Vertices.eq le s s' (Vertices.compare s s').
         constructor 3; subst; auto.
     Qed.
 
+    
+  Fixpoint lt_listb l1 l2 :=
+    match l1, l2 with
+    | nil, nil => false
+    | nil, l2' => true
+    | (x :: l), nil => false
+    | (x::l), (y::l') => if ordVertFacts.lt_dec x y then true
+        else if ordVertFacts.eq_dec x y then le_listb l l' else
+                           false
+    end.
 
-  
+  Lemma lt_listReflect :
+    forall l l', reflect (ord.lt_list l l') (lt_listb l l').
+  Proof.
+    Admitted.
 
   Definition le_set s s' : Prop :=
     le_list (Vertices.elements s)  (Vertices.elements s').
@@ -305,20 +272,34 @@ CompSpec Vertices.eq le s s' (Vertices.compare s s').
 
   Definition le_setb s s' : bool :=
     le_listb (Vertices.elements s) (Vertices.elements s').
-  
-  
-  Hint Unfold le_setb.
-  Hint Resolve le_listReflect.
 
-  Lemma le_setReflect : forall s s', reflect (le_set s s') (le_setb s s').
+  Definition lt_setb s s' : bool :=
+    lt_listb (Vertices.elements s) (Vertices.elements s').
+      
+  Hint Unfold le_setb.
+  Hint Unfold lt_setb.
+  Hint Unfold lt_set.
+  Hint Unfold le_set.
+  Hint Resolve le_listReflect.
+  Hint Resolve lt_listReflect.
+
+  Lemma lt_setReflect : forall s s',
+      reflect (lt_set s s') (lt_setb s s').
+  Proof.
+    intros.
+    unfold lt_set.
+    unfold lt_setb.
+    auto.
+  Qed.
+
+    Lemma le_setReflect : forall s s',
+        reflect (le_set s s') (le_setb s s').
   Proof.
     intros.
     unfold le_set.
     unfold le_setb.
-    apply le_listReflect.
+    auto.
   Qed.
-
-
 
   Theorem le_setPreOrder : PreOrder le_set.
   Proof.
@@ -331,10 +312,6 @@ CompSpec Vertices.eq le s s' (Vertices.compare s s').
     intros.
     eapply le_list_trans; eauto.
   Qed.
-
-
-
-
 
   Add Morphism le_list
         with signature my_eqlistA ==> my_eqlistA ==> iff
@@ -700,3 +677,42 @@ CompSpec Vertices.eq le s s' (Vertices.compare s s').
   Qed.
 
 End SetOrd.
+
+Set Implicit Arguments.
+
+Module SetOrderedType  (V : Sets) <: OrderedType.
+  Module Import Ordering := SetOrd V.
+  Definition t := V.t.
+  Definition eq := V.eq.
+  Definition eq_equiv := V.eq_equiv.
+  Definition lt := Ordering.lt_set.
+  Instance lt_strorder : StrictOrder lt.
+  Admitted.
+
+  Lemma lt_compat : Proper (eq ==> eq ==> iff) lt.
+  Proof.
+  Admitted.
+
+  Definition compare (x y : t) : comparison :=
+    match Ordering.lt_setb x y with
+    | true => Lt
+    | false => match Ordering.lt_setb y x with
+               | true => Gt
+               | false => Eq
+               end
+    end.
+
+  Lemma compare_spec : forall  x y,
+      CompareSpec (eq x y) (lt x y)
+                  (lt y x) (compare x y).
+  Proof.
+    Admitted.
+
+  Lemma eq_dec : forall x y, {eq x y} + {~ eq x y}.
+    Proof.
+      Admitted.
+
+End SetOrderedType.
+  
+
+
