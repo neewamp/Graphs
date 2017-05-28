@@ -21,36 +21,57 @@ Module auxproofs (SG : SimpleUndirectedGraphs).
   Import ListNotations.
   
   Theorem elementsList_eq : forall s1 s2,
-      Vertices.eq s1 s2 -> eqlistA Vertices.E.eq (Vertices.elements s1) (Vertices.elements s2).
+      Vertices.eq s1 s2 <-> eqlistA Vertices.E.eq (Vertices.elements s1) (Vertices.elements s2).
   Proof.
-    intros.
-    induction s1 using ordV.set_induction_max.
-    induction s2 using ordV.set_induction_max.
-    rewrite  ordV.P.elements_Empty in H0,H1.
-    rewrite  H0,H1.
-    +      constructor.
-    +
-      assert (ordV.P.Add x s2_1 s2_2) by auto.
-      rewrite  ordV.P.Add_Equal in H2.
-      symmetry.
-      rewrite  ordV.elements_Add_Above with (s := s2_1) (x := x);                   auto.
-      symmetry.
-      apply  ordV.elements_Add_Above; auto.
-      rewrite  ordV.P.Add_Equal.
-      rewrite H.
-      auto.
-    +
-      assert (ordV.P.Add x s1_1 s1_2) by auto.
-      rewrite  ordV.P.Add_Equal in H2.
-      symmetry.
-      rewrite  ordV.elements_Add_Above with (s := s1_1) (x := x);                   auto.
-      symmetry.
-      apply  ordV.elements_Add_Above; auto.
-      rewrite  ordV.P.Add_Equal.
-      rewrite <- H.
-      auto.
+    split;
+      intros.
+    {
+      induction s1 using ordV.set_induction_max.
+      induction s2 using ordV.set_induction_max.
+      rewrite  ordV.P.elements_Empty in H0,H1.
+      rewrite  H0,H1.
+      +      constructor.
+      +
+        assert (ordV.P.Add x s2_1 s2_2) by auto.
+        rewrite  ordV.P.Add_Equal in H2.
+        symmetry.
+        rewrite  ordV.elements_Add_Above with (s := s2_1) (x := x);                   auto.
+        symmetry.
+        apply  ordV.elements_Add_Above; auto.
+        rewrite  ordV.P.Add_Equal.
+        rewrite H.
+        auto.
+      +
+        assert (ordV.P.Add x s1_1 s1_2) by auto.
+        rewrite  ordV.P.Add_Equal in H2.
+        symmetry.
+        rewrite  ordV.elements_Add_Above with (s := s1_1) (x := x);                   auto.
+        symmetry.
+        apply  ordV.elements_Add_Above; auto.
+        rewrite  ordV.P.Add_Equal.
+        rewrite <- H.
+        auto.
+    }
+    {
+      inversion H;
+      subst.
+      assert (Vertices.elements s1 = [] /\ Vertices.elements s2 = [])
+             by auto.
+      intuition.
+      rewrite <- ordV.P.elements_Empty in *.
+      rewrite ordV.P.empty_is_empty_1; auto.
+      apply  ordV.P.empty_is_empty_1 in H4; auto.
+      rewrite H4; reflexivity.
+      intros v.
+      split; intros;
+      rewrite ordV.P.Dec.F.elements_iff in *;
+      rewrite <- H0 in *;
+      rewrite <- H1 in *;
+      clear H0; clear H1;
+        [rewrite <- H2;
+         rewrite <- H3 | rewrite H2; rewrite H3]; auto.
+    }
   Qed.
-  
 
   Lemma listIn : forall x V, Vertices.In x V -> exists y, y = x /\ Vertices.In y V.
   Proof.
@@ -232,18 +253,64 @@ Module auxproofs (SG : SimpleUndirectedGraphs).
   (*   inv *)
 
 
+  Lemma mon_aux_equivlistA_eq_app :
+    forall   x0 x1 v V, Vertices.In v V
+  -> eqlistA Vertices.E.eq (Vertices.elements V)
+         (Vertices.elements x0 ++ v :: Vertices.elements x1)
+ -> Sorted Vertices.E.lt
+        (Vertices.elements x0 ++ v :: Vertices.elements x1) ->
+  V =V= Vertices.union x1 (Vertices.add v x0).
+  Proof.
+    intros.
+    apply eqlistA_equivlistA in H0; auto.
+    split; intros.
+    +
+      unfold equivlistA in H0.
+      rewrite ordV.P.Dec.F.elements_iff in H2.
+      apply H0 in H2.
+      apply Vertices.union_spec.
+      apply InA_app in H2.
+      destruct H2.
+      *
+        right.
+        apply Vertices.add_spec.
+        right.
+        apply ordV.P.Dec.F.elements_iff.
+        auto.
+      *
+        inversion H2;
+          subst.
+        { right; apply Vertices.add_spec; auto. }
+        { left; apply ordV.P.Dec.F.elements_iff; auto. }
+    +
+      apply Vertices.union_spec in H2.
+      destruct H2; rewrite ordV.P.Dec.F.elements_iff;
+        rewrite H0; apply InA_app_iff.
+      *
+        right. 
+        constructor 2.
+        rewrite <- ordV.P.Dec.F.elements_iff; auto.
+      *
+        apply Vertices.add_spec in H2.
+        destruct H2;
+          [right; rewrite H2; constructor 1 |
+           left; apply ordV.P.Dec.F.elements_iff]; auto.
+  Qed.
+
+
 
 
 
 (* This should be changed to say that l ++ l' has no dups you probably 
    need to know that. NoDupA Vertices.E.eq (l ++ l') *)
+
   Lemma more_sorting : forall x y l l', NoDupA Vertices.E.eq (l ++ l') -> Sorted Vertices.E.lt (l ++ l') -> InA Vertices.E.eq x l -> InA Vertices.E.eq y l' -> Vertices.E.lt x y. 
   Proof.
     intros.
-    apply SortA_InfA_InA with (eqA := Vertices.E.eq) (l := l'); auto.
-    admit.
-    admit.
-    admit.
+    inversion H0;
+    subst.
+    assert (l ++ l' = []) by (symmetry; auto).
+    apply app_eq_nil in H3; intuition; subst; si.
   Admitted.
 
 
