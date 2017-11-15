@@ -51,7 +51,6 @@ Class carrier
       `(DecFullFSet edge)
   := {}.
 
-Section Graphs.
 Class Graph
       (t : Type)
       `(carrier)
