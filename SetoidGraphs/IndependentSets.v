@@ -28,7 +28,7 @@ Ltac si :=
   try solve_by_inverts 4); eauto.
 
 Section IndependentSets.
-  Context `(Graph).
+  Context `(SG : SimpleUndirectedGraph).
   Definition asdf : Type.
     
   Program  Definition IndependentSet (X : set_type vertex) (g : t) :=
@@ -55,11 +55,11 @@ Section IndependentSets.
     split; intros.
     {
       intros Hnot.
-      rewrite for_all_forall in H9.
-      apply H9 in H10.
-      rewrite for_all_forall in H10.
-      apply H10 in H11.
-      rewrite negb_true_iff in H11.
+      rewrite for_all_forall in H.
+      apply H in H0.
+      rewrite for_all_forall in H0.
+      apply H0 in H1.
+      rewrite negb_true_iff in H1.
       destruct (mem_reflect (buildEdge x y) (enumEdges G)); 
       si.
     }
@@ -67,7 +67,7 @@ Section IndependentSets.
     rewrite negb_true_iff.
     destruct (mem_reflect (buildEdge v v0) (enumEdges G)); auto.
     exfalso.
-    apply (H9 v v0); auto.
+    apply (H v v0); auto.
   Qed.
 
   Definition ValidSet (X : set_type vertex) (G : t) :=
@@ -88,15 +88,15 @@ Section IndependentSets.
     split; intros; auto.
     {
       assert (x ∈ X) by auto.
-      rewrite mem_iff in H10; auto.
-      apply H9 in H11.
+      rewrite mem_iff in H0; auto.
+      apply H in H1.
       rewrite mem_iff; auto.
-      rewrite H10 in H11; auto.
+      rewrite H0 in H1; auto.
     }
     assert (contains v X) by auto.
-    apply H9 in H10.
-    rewrite mem_iff in H10,H11; auto.
-    rewrite H11; auto.
+    apply H in H0.
+    rewrite mem_iff in H0,H1; auto.
+    rewrite H1; auto.
   Qed.
 
   Theorem validSetRecr : 
@@ -105,7 +105,7 @@ Section IndependentSets.
   Proof.
     red. intros.
     unfold ValidSet in *.
-    apply H9; auto.
+    apply H; auto.
     rewrite fset_in_join.
     auto.
   Qed.
@@ -127,23 +127,22 @@ Section IndependentSets.
     split; try constructor; intuition.
     destruct (independentSet_true_iff X G);
       destruct (validSet_true_iff X G); auto;
-    inversion H10;
+    inversion H0;
     contradiction.
-    apply andb_true_iff in H10.
-    destruct H10.
+    apply andb_true_iff in H0.
+    destruct H0.
     destruct (validSet_true_iff X G); auto;
     si.
     destruct (independentSet_true_iff X G); auto.
-    apply andb_true_iff in H10.
+    apply andb_true_iff in H0.
     si.
   Qed.
 
-
-  Theorem nilIndSet : IndSet ⊥ empty.
+  Theorem nilIndSet : IndSet bottom empty.
   Proof.
      constructor; unfold IndependentSet;
       try constructor; try intros x y H; unfold ValidSet; intros;
-      try apply fset_notin_empty in H9; 
+      try apply fset_notin_empty in H; 
       try contradiction.    
   Qed.
 
@@ -153,41 +152,41 @@ Section IndependentSets.
     constructor.
     unfold ValidSet.
     intros.
-    apply fset_notin_empty in H9.
+    apply fset_notin_empty in H.
     contradiction.
     unfold IndependentSet.
     intros.
-    apply fset_notin_empty in H9.
+    apply fset_notin_empty in H.
     contradiction.
   Qed.
 
   Theorem nilIndSetAdd : forall x G, contains x (enumVertices G) ->
                        IndSet (join {{x}} bottom) G.
   Proof.
-    intros x G H10.
+    intros x G H12.
     constructor.
     {
       unfold ValidSet.
       intros.
-      rewrite fset_in_add in H9.
-      destruct H9.
-      rewrite H9;
+      rewrite fset_in_add in H.
+      destruct H.
+      rewrite H;
         auto.
-      apply fset_notin_empty in H9; contradiction.
+      apply fset_notin_empty in H; contradiction.
     }      
     unfold IndependentSet.
     intros.
     intros Hnot.
-    rewrite fset_in_add in H9,H11.
-    destruct H9.
-    destruct H11.
+    rewrite fset_in_add in H,H0.
+    destruct H.
+    destruct H0.
     subst.
     admit.
     (* eapply IsEdgeEnum  in Hnot; eauto. *)
     (* rewrite H9 in Hnot. *)
     (* apply edges_irreflexive in Hnot. *)
-    apply fset_notin_empty in H11; contradiction.
-    apply fset_notin_empty in H9; contradiction.
+    apply fset_notin_empty in H0; contradiction.
+    apply fset_notin_empty in H; contradiction.
   Admitted.
 
 
